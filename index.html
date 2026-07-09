@@ -1,0 +1,1759 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Trade Esportivo · Painel</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+<style>
+/* ============================================================
+   TOKENS — cores, tipografia, espaçamento
+   ============================================================ */
+:root{
+  --bg:#0A0D12;
+  --surface:#12161D;
+  --surface-2:#1A1F28;
+  --surface-3:#232935;
+  --border:#262D38;
+  --text:#EDEFF3;
+  --text-muted:#8A93A3;
+  --text-dim:#5C6472;
+
+  --g1:#6C8EF5;       /* Núcleo — Vovô / 2 Gols à Frente / Lay Goleada */
+  --g1-bg:rgba(108,142,245,.12);
+  --g2:#E8B84B;       /* Ritmo — Match Odds / Over Gols */
+  --g2-bg:rgba(232,184,75,.12);
+  --outros:#7A8394;
+  --outros-bg:rgba(122,131,148,.12);
+
+  --pos:#34D399;
+  --pos-bg:rgba(52,211,153,.12);
+  --neg:#F0616B;
+  --neg-bg:rgba(240,97,107,.12);
+
+  --radius-lg:18px;
+  --radius-md:12px;
+  --radius-sm:8px;
+
+  --font-display:'Space Grotesk', sans-serif;
+  --font-body:'Inter', sans-serif;
+}
+
+*{box-sizing:border-box;}
+html{-webkit-tap-highlight-color:transparent;}
+body{
+  margin:0;
+  font-family:var(--font-body);
+  background:
+    radial-gradient(circle at 15% 0%, rgba(108,142,245,.08), transparent 40%),
+    radial-gradient(circle at 85% 15%, rgba(232,184,75,.06), transparent 40%),
+    var(--bg);
+  color:var(--text);
+  padding-bottom:88px; /* espaço pro nav + fab no mobile */
+}
+
+h1,h2,h3{font-family:var(--font-display); margin:0;}
+::selection{background:var(--g2); color:#0A0D12;}
+
+/* ============================================================
+   TOPO
+   ============================================================ */
+header.topbar{
+  position:sticky; top:0; z-index:30;
+  display:flex; align-items:center; justify-content:space-between;
+  padding:14px 18px;
+  background:rgba(10,13,18,.85);
+  backdrop-filter:blur(10px);
+  border-bottom:1px solid var(--border);
+}
+header.topbar .brand{display:flex; align-items:center; gap:10px;}
+header.topbar .brand .dot{
+  width:10px;height:10px;border-radius:50%;
+  background:linear-gradient(135deg, var(--g1), var(--g2));
+  box-shadow:0 0 10px rgba(232,184,75,.6);
+}
+header.topbar h1{font-size:1.05rem; font-weight:600; letter-spacing:.2px;}
+header.topbar .banca-mini{text-align:right;}
+header.topbar .banca-mini .label{font-size:.68rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:.06em;}
+header.topbar .banca-mini .valor{font-family:var(--font-display); font-weight:700; font-size:1.05rem;}
+
+.icon-btn{
+  background:none; border:1px solid var(--border); color:var(--text-muted);
+  width:34px; height:34px; border-radius:50%;
+  display:flex; align-items:center; justify-content:center;
+  cursor:pointer; font-size:.95rem; padding:0;
+}
+.icon-btn:hover{border-color:var(--g2); color:var(--g2);}
+
+nav.desktop-nav{
+  display:flex; gap:8px; padding:10px 18px; overflow-x:auto;
+  border-bottom:1px solid var(--border);
+}
+nav.desktop-nav a{
+  color:var(--text-muted); text-decoration:none; font-size:.85rem; font-weight:600;
+  padding:8px 16px; border-radius:20px; border:1px solid var(--border); white-space:nowrap;
+}
+nav.desktop-nav a:hover{color:var(--text); border-color:var(--g2);}
+
+.container{max-width:960px; margin:0 auto; padding:16px;}
+
+/* ============================================================
+   CARDS
+   ============================================================ */
+.card{
+  background:linear-gradient(180deg, var(--surface-2), var(--surface));
+  border:1px solid var(--border);
+  border-radius:var(--radius-lg);
+  padding:18px;
+  margin-bottom:16px;
+}
+.card-head{display:flex; align-items:center; justify-content:space-between; margin-bottom:14px;}
+.card-head h2{font-size:.95rem; font-weight:600; color:var(--text);}
+.card-head .sub{font-size:.72rem; color:var(--text-muted);}
+
+/* ============================================================
+   TERMÔMETRO DE META DO DIA (elemento assinatura)
+   ============================================================ */
+.meta-hoje{padding:20px 18px;}
+.meta-hoje-topo{display:flex; align-items:baseline; justify-content:space-between; margin-bottom:14px; flex-wrap:wrap; gap:6px;}
+.meta-hoje-topo .titulo{font-size:.78rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:.06em;}
+.meta-hoje-topo .status-pill{
+  font-size:.7rem; font-weight:700; padding:4px 10px; border-radius:20px;
+}
+.status-pill.batida{background:var(--pos-bg); color:var(--pos);}
+.status-pill.andamento{background:var(--g2-bg); color:var(--g2);}
+.status-pill.zerado{background:var(--outros-bg); color:var(--outros);}
+.status-pill.negativo{background:var(--neg-bg); color:var(--neg);}
+
+.meta-hoje-numero{display:flex; align-items:baseline; gap:10px; margin-bottom:16px;}
+.meta-hoje-numero .valor{font-family:var(--font-display); font-size:2.1rem; font-weight:700; line-height:1;}
+.meta-hoje-numero .meta-de{font-size:.85rem; color:var(--text-muted);}
+
+.barra-total{
+  height:14px; border-radius:20px; background:var(--surface-3);
+  overflow:hidden; position:relative; border:1px solid var(--border);
+  margin-bottom:16px;
+}
+.barra-total .preenchimento{
+  height:100%; border-radius:20px;
+  background:linear-gradient(90deg, var(--g1), var(--g2));
+  transition:width .5s ease;
+}
+.barra-total .marca-100{
+  position:absolute; top:-3px; bottom:-3px; width:2px; background:var(--text);
+  right:0; opacity:.4;
+}
+
+.submetas{display:grid; grid-template-columns:1fr 1fr; gap:12px;}
+.submeta{
+  background:var(--surface-3); border:1px solid var(--border); border-radius:var(--radius-md);
+  padding:12px 14px;
+}
+.submeta .rotulo{display:flex; align-items:center; gap:6px; font-size:.72rem; font-weight:700; margin-bottom:8px;}
+.submeta .rotulo .chip-dot{width:8px; height:8px; border-radius:50%;}
+.submeta.g1 .chip-dot{background:var(--g1);} .submeta.g1 .rotulo{color:var(--g1);}
+.submeta.g2 .chip-dot{background:var(--g2);} .submeta.g2 .rotulo{color:var(--g2);}
+.submeta .valores{display:flex; justify-content:space-between; font-size:.8rem; color:var(--text-muted); margin-bottom:6px;}
+.submeta .valores strong{color:var(--text); font-family:var(--font-display);}
+.mini-barra{height:6px; border-radius:10px; background:rgba(255,255,255,.06); overflow:hidden;}
+.mini-barra span{display:block; height:100%; border-radius:10px;}
+.submeta.g1 .mini-barra span{background:var(--g1);}
+.submeta.g2 .mini-barra span{background:var(--g2);}
+
+/* ============================================================
+   PROGRESSO DE BANCA (1000 → 3000)
+   ============================================================ */
+.progresso-banca .linha-topo{display:flex; justify-content:space-between; font-size:.78rem; color:var(--text-muted); margin-bottom:8px;}
+.progresso-banca .linha-topo strong{color:var(--text);}
+.trilho{height:10px; border-radius:20px; background:var(--surface-3); border:1px solid var(--border); overflow:hidden;}
+.trilho .fill{height:100%; background:linear-gradient(90deg, var(--g1), var(--pos)); border-radius:20px; transition:width .5s ease;}
+.marcos{display:flex; justify-content:space-between; margin-top:6px; font-size:.68rem; color:var(--text-dim);}
+
+/* ============================================================
+   GRID DE STATS
+   ============================================================ */
+.stats-grid{display:grid; grid-template-columns:repeat(auto-fit, minmax(140px,1fr)); gap:12px;}
+.stat-card{
+  background:var(--surface-3); border:1px solid var(--border); border-radius:var(--radius-md);
+  padding:14px;
+}
+.stat-card .rotulo{font-size:.68rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:.05em; margin-bottom:6px;}
+.stat-card .valor{font-family:var(--font-display); font-weight:700; font-size:1.25rem;}
+.positive{color:var(--pos);} .negative{color:var(--neg);}
+
+/* ============================================================
+   CALENDÁRIO
+   ============================================================ */
+#calendario{display:grid; grid-template-columns:repeat(7, 1fr); gap:6px; margin-top:4px;}
+.dia-semana{text-align:center; font-size:.68rem; font-weight:700; color:var(--text-dim); padding:6px 0; text-transform:uppercase;}
+.dia-vazio{background:transparent;}
+.dia{
+  background:var(--surface-3); border:1px solid var(--border); border-radius:var(--radius-sm);
+  padding:8px 4px; text-align:center; cursor:pointer; min-height:58px;
+  display:flex; flex-direction:column; justify-content:center; gap:2px;
+  transition:transform .15s ease;
+}
+.dia:active{transform:scale(.95);}
+.dia .num{font-size:.72rem; color:var(--text-muted); font-weight:600;}
+.dia .val{font-size:.68rem; font-family:var(--font-display); font-weight:700;}
+.dia.positivo{background:var(--pos-bg); border-color:rgba(52,211,153,.4);}
+.dia.positivo .val{color:var(--pos);}
+.dia.meta-batida{background:linear-gradient(160deg, rgba(52,211,153,.25), rgba(52,211,153,.08)); border-color:var(--pos);}
+.dia.negativo{background:var(--neg-bg); border-color:rgba(240,97,107,.4);}
+.dia.negativo .val{color:var(--neg);}
+.dia.neutro .val{color:var(--text-dim);}
+.dia.hoje{border-color:var(--g2); box-shadow:0 0 0 1px var(--g2);}
+.legenda-cal{display:flex; flex-wrap:wrap; gap:12px; margin-top:12px; font-size:.68rem; color:var(--text-muted);}
+.legenda-cal span{display:inline-flex; align-items:center; gap:5px;}
+.legenda-cal i{width:9px; height:9px; border-radius:3px; display:inline-block;}
+
+/* ============================================================
+   GRÁFICOS
+   ============================================================ */
+.grafico-box{height:260px; position:relative;}
+.grafico-box canvas{max-height:260px !important;}
+.charts-grid{display:grid; grid-template-columns:1.3fr 1fr; gap:16px; margin-bottom:16px;}
+@media (max-width:768px){.charts-grid{grid-template-columns:1fr;}}
+
+.charts-grid-3{display:grid; grid-template-columns:repeat(3, 1fr); gap:16px;}
+@media (max-width:768px){.charts-grid-3{grid-template-columns:1fr;}}
+.subtitulo-grafico{font-size:.75rem; font-weight:700; margin-bottom:8px;}
+.subtitulo-grafico.g1{color:var(--g1);}
+.subtitulo-grafico.g2{color:var(--g2);}
+.subtitulo-grafico.geral{color:var(--pos);}
+.grafico-box.pequeno{height:190px;}
+.grafico-box.pequeno canvas{max-height:190px !important;}
+.grafico-box.scroll-x{overflow-x:auto; overflow-y:hidden;}
+.grafico-scroll-inner{height:100%; min-width:100%;}
+.select-periodo{
+  width:auto; margin:0; padding:6px 10px; font-size:.75rem; font-weight:600;
+  background:var(--surface-3); color:var(--text-muted); border:1px solid var(--border); border-radius:8px;
+}
+.dica-toque{font-size:.7rem; color:var(--text-dim); margin:10px 0 0;}
+
+/* ============================================================
+   BADGES DE GRUPO
+   ============================================================ */
+.badge{
+  display:inline-flex; align-items:center; gap:5px; font-size:.68rem; font-weight:700;
+  padding:3px 9px; border-radius:20px; white-space:nowrap;
+}
+.badge.g1{background:var(--g1-bg); color:var(--g1);}
+.badge.g2{background:var(--g2-bg); color:var(--g2);}
+.badge.outros{background:var(--outros-bg); color:var(--outros);}
+.badge::before{content:''; width:6px; height:6px; border-radius:50%; background:currentColor;}
+
+/* ============================================================
+   FILTROS DE LISTA
+   ============================================================ */
+.filtros{display:flex; gap:8px; overflow-x:auto; margin-bottom:14px; padding-bottom:2px;}
+.filtro-btn{
+  background:var(--surface-3); border:1px solid var(--border); color:var(--text-muted);
+  padding:7px 14px; border-radius:20px; font-size:.75rem; font-weight:600; cursor:pointer;
+  white-space:nowrap;
+}
+.filtro-btn.active{background:var(--g2); color:#0A0D12; border-color:var(--g2);}
+
+/* ============================================================
+   TABELA / LISTA DE ENTRADAS
+   ============================================================ */
+.table-wrapper{overflow-x:auto;}
+table{width:100%; border-collapse:collapse; font-size:.82rem;}
+th,td{padding:10px 8px; text-align:left; border-bottom:1px solid var(--border); white-space:nowrap;}
+th{color:var(--text-muted); font-size:.68rem; text-transform:uppercase; letter-spacing:.05em; font-weight:600;}
+.acoes-btn{
+  background:var(--surface-3); border:1px solid var(--border); color:var(--text-muted);
+  padding:5px 10px; border-radius:8px; font-size:.72rem; cursor:pointer; margin-right:4px;
+}
+.acoes-btn:hover{border-color:var(--g2); color:var(--g2);}
+.acoes-btn.remover:hover{border-color:var(--neg); color:var(--neg);}
+.empty-state{text-align:center; padding:40px 20px; color:var(--text-muted);}
+.empty-state .svg-empty{display:flex; justify-content:center; margin-bottom:10px; color:var(--text-dim);}
+
+@media (max-width:768px){
+  table thead{display:none;}
+  table, table tbody, table tr, table td{display:block; width:100%;}
+  table tr{
+    background:var(--surface-3); border:1px solid var(--border); border-radius:var(--radius-md);
+    margin-bottom:10px; padding:10px 12px;
+  }
+  table td{border:none; padding:5px 0; white-space:normal; display:flex; justify-content:space-between; gap:10px; align-items:center;}
+  table td::before{content:attr(data-label); color:var(--text-dim); font-size:.68rem; font-weight:600; text-transform:uppercase;}
+  table td.linha-acoes{justify-content:flex-start;}
+  table td.linha-acoes::before{display:none;}
+}
+
+/* ============================================================
+   FORM — NOVA ENTRADA (modal / bottom sheet)
+   ============================================================ */
+.fab{
+  position:fixed; right:20px; bottom:92px; z-index:40;
+  width:58px; height:58px; border-radius:50%;
+  background:linear-gradient(135deg, var(--g1), var(--g2));
+  color:#0A0D12; border:none; font-size:1.6rem; font-weight:700;
+  display:flex; align-items:center; justify-content:center;
+  cursor:pointer; box-shadow:0 6px 20px rgba(232,184,75,.35);
+}
+@media (min-width:769px){.fab{bottom:24px;}}
+
+.overlay{
+  position:fixed; inset:0; background:rgba(5,7,10,.72); backdrop-filter:blur(3px);
+  z-index:60; display:none; align-items:flex-end; justify-content:center;
+}
+@media (min-width:769px){.overlay{align-items:center;}}
+.overlay.open{display:flex;}
+.sheet{
+  background:var(--surface); border:1px solid var(--border);
+  border-radius:20px 20px 0 0; width:100%; max-width:560px;
+  max-height:92vh; overflow-y:auto; padding:18px 18px calc(18px + env(safe-area-inset-bottom));
+}
+@media (min-width:769px){.sheet{border-radius:20px;}}
+.sheet-head{display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; position:sticky; top:0; background:var(--surface); padding-bottom:8px;}
+
+.chips{display:flex; flex-wrap:wrap; gap:8px; margin-bottom:16px;}
+.chip{
+  border-radius:20px; padding:8px 14px; font-size:.75rem; font-weight:700; cursor:pointer;
+  border:1px solid var(--border); background:var(--surface-3); color:var(--text-muted);
+}
+.chip.g1{border-color:rgba(108,142,245,.35); color:var(--g1);}
+.chip.g2{border-color:rgba(232,184,75,.35); color:var(--g2);}
+.chip.active{background:currentColor; color:#0A0D12 !important;}
+.chip.g1.active{background:var(--g1);}
+.chip.g2.active{background:var(--g2);}
+
+form label{display:block; font-size:.78rem; font-weight:600; color:var(--text-muted); margin-bottom:14px;}
+input, select, textarea{
+  width:100%; padding:11px 12px; border-radius:var(--radius-sm); border:1px solid var(--border);
+  background:var(--surface-3); color:var(--text); margin-top:6px; font-size:.9rem; font-family:var(--font-body);
+}
+input:focus, select:focus, textarea:focus{outline:none; border-color:var(--g2); box-shadow:0 0 0 3px rgba(232,184,75,.15);}
+.linha-2{display:grid; grid-template-columns:1fr 1fr; gap:12px;}
+
+.box-lay{
+  background:var(--g2-bg); border:1px solid rgba(232,184,75,.35); color:var(--g2);
+  padding:10px 12px; border-radius:var(--radius-sm); margin-bottom:14px; font-size:.8rem; font-weight:600; display:none;
+}
+
+details.avancado{margin-bottom:14px; border:1px solid var(--border); border-radius:var(--radius-md); padding:0 14px;}
+details.avancado summary{cursor:pointer; padding:12px 0; font-size:.8rem; font-weight:700; color:var(--text-muted); list-style:none; display:flex; align-items:center; justify-content:space-between;}
+details.avancado summary::-webkit-details-marker{display:none;}
+details.avancado[open] summary{border-bottom:1px solid var(--border); margin-bottom:12px;}
+
+button.btn-primario{
+  width:100%; padding:14px; border-radius:var(--radius-md); border:none; cursor:pointer;
+  background:linear-gradient(135deg, var(--g1), var(--g2)); color:#0A0D12; font-weight:700; font-size:.95rem;
+  font-family:var(--font-body);
+}
+
+/* modal genérico (detalhe do dia) */
+.modal-content{padding:2px;}
+.entrada-item{
+  background:var(--surface-3); border:1px solid var(--border); border-radius:var(--radius-sm);
+  padding:12px; margin-bottom:8px; font-size:.82rem;
+}
+.entrada-item .linha1{display:flex; justify-content:space-between; margin-bottom:4px; font-weight:600;}
+
+/* toast */
+#toast{
+  position:fixed; top:14px; left:50%; transform:translateX(-50%) translateY(-20px);
+  background:var(--surface-3); border:1px solid var(--border); color:var(--text);
+  padding:10px 18px; border-radius:20px; font-size:.82rem; font-weight:600;
+  z-index:100; opacity:0; transition:all .3s ease; pointer-events:none;
+  box-shadow:0 8px 24px rgba(0,0,0,.4);
+}
+#toast.show{opacity:1; transform:translateX(-50%) translateY(0);}
+#toast.erro{border-color:rgba(240,97,107,.5); color:var(--neg);}
+#toast.sucesso{border-color:rgba(52,211,153,.5); color:var(--pos);}
+
+/* ============================================================
+   RANKINGS
+   ============================================================ */
+.ranking-colunas{display:grid; grid-template-columns:1fr 1fr; gap:18px;}
+@media (max-width:640px){.ranking-colunas{grid-template-columns:1fr;}}
+.ranking-titulo-coluna{font-size:.72rem; font-weight:700; text-transform:uppercase; letter-spacing:.05em; margin-bottom:10px;}
+.ranking-titulo-coluna.melhores{color:var(--pos);}
+.ranking-titulo-coluna.piores{color:var(--neg);}
+.ranking-linha{
+  display:flex; align-items:center; gap:10px; padding:10px; border-radius:var(--radius-sm);
+  background:var(--surface-3); border:1px solid var(--border); margin-bottom:8px; cursor:pointer;
+}
+.ranking-linha:hover{border-color:var(--g2);}
+.ranking-pos{
+  width:22px; height:22px; border-radius:50%; background:var(--surface-2); color:var(--text-muted);
+  display:flex; align-items:center; justify-content:center; font-size:.68rem; font-weight:700; flex-shrink:0;
+}
+.ranking-info{flex:1; min-width:0;}
+.ranking-nome{font-size:.82rem; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+.ranking-sub{font-size:.68rem; color:var(--text-muted); margin-top:2px;}
+.ranking-valor{font-family:var(--font-display); font-weight:700; font-size:.85rem; white-space:nowrap;}
+.ranking-freq-barra{height:5px; border-radius:10px; background:rgba(255,255,255,.06); margin-top:6px; overflow:hidden;}
+.ranking-freq-barra span{display:block; height:100%; border-radius:10px;}
+.ranking-vazio{text-align:center; color:var(--text-muted); padding:24px; font-size:.85rem;}
+
+/* ============================================================
+   NAV INFERIOR (mobile)
+   ============================================================ */
+nav.bottom-nav{
+  display:none;
+  position:fixed; bottom:0; left:0; right:0; z-index:35;
+  background:rgba(10,13,18,.92); backdrop-filter:blur(10px);
+  border-top:1px solid var(--border);
+  padding:8px 10px calc(8px + env(safe-area-inset-bottom));
+  justify-content:space-around;
+}
+nav.bottom-nav a{
+  color:var(--text-dim); text-decoration:none; font-size:.62rem; font-weight:600;
+  display:flex; flex-direction:column; align-items:center; gap:3px; padding:4px 10px;
+}
+nav.bottom-nav a .ic{display:flex;}
+nav.bottom-nav a.active{color:var(--g2);}
+
+@media (max-width:768px){
+  nav.desktop-nav{display:none;}
+  nav.bottom-nav{display:flex;}
+}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">
+    <span class="dot"></span>
+    <h1>Trade Esportivo</h1>
+  </div>
+  <div style="display:flex; align-items:center; gap:10px;">
+    <div class="banca-mini">
+      <div class="label">Banca atual</div>
+      <div class="valor" id="bancaAtualTopo" data-valor="R$ 1.000,00">R$ 1.000,00</div>
+    </div>
+    <button class="icon-btn" id="btnOlho" onclick="alternarValores()" title="Ocultar valores">
+      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+    </button>
+  </div>
+</header>
+
+<nav class="desktop-nav">
+  <a href="#dashboard">Painel</a>
+  <a href="#calendario-card">Calendário</a>
+  <a href="#graficos">Gráficos</a>
+  <a href="#entradas-lista">Entradas</a>
+</nav>
+
+<div class="container">
+
+  <!-- ============ META DO DIA (elemento principal) ============ -->
+  <div class="card meta-hoje" id="dashboard">
+    <div class="meta-hoje-topo">
+      <span class="titulo">Meta de hoje</span>
+      <span class="status-pill" id="statusPillHoje">—</span>
+    </div>
+    <div class="meta-hoje-numero">
+      <span class="valor" id="valorHojeHeader">R$ 0,00</span>
+      <span class="meta-de">de R$ 160,00 (meta combinada)</span>
+    </div>
+    <div class="barra-total">
+      <div class="preenchimento" id="barraMetaTotal" style="width:0%"></div>
+      <div class="marca-100"></div>
+    </div>
+    <div class="submetas">
+      <div class="submeta g1">
+        <div class="rotulo"><span class="chip-dot"></span> Núcleo · 25%/dia</div>
+        <div class="valores"><span>Hoje</span><strong id="valorG1Hoje">R$ 0,00</strong></div>
+        <div class="mini-barra"><span id="barraG1" style="width:0%"></span></div>
+      </div>
+      <div class="submeta g2">
+        <div class="rotulo"><span class="chip-dot"></span> Ritmo · 60%/dia</div>
+        <div class="valores"><span>Hoje</span><strong id="valorG2Hoje">R$ 0,00</strong></div>
+        <div class="mini-barra"><span id="barraG2" style="width:0%"></span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ PROGRESSO DE BANCA ============ -->
+  <div class="card progresso-banca">
+    <div class="card-head">
+      <h2>Jornada da banca</h2>
+      <span class="sub" id="progressoPct">0%</span>
+    </div>
+    <div class="linha-topo">
+      <span>Início: <strong>R$ 1.000,00</strong></span>
+      <span>Meta: <strong>R$ 3.000,00</strong></span>
+    </div>
+    <div class="trilho"><div class="fill" id="trilhoFill" style="width:0%"></div></div>
+    <div class="marcos"><span>R$ 1.000</span><span>R$ 3.000</span></div>
+  </div>
+
+  <!-- ============ STATS GERAIS ============ -->
+  <div class="card">
+    <div class="card-head"><h2>Resumo geral</h2></div>
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="rotulo">Lucro total</div>
+        <div class="valor valor-financeiro" id="lucroTotal" data-valor="R$ 0,00">R$ 0,00</div>
+      </div>
+      <div class="stat-card">
+        <div class="rotulo">Taxa de acerto</div>
+        <div class="valor" id="taxaAcerto">0%</div>
+      </div>
+      <div class="stat-card">
+        <div class="rotulo">Total de entradas</div>
+        <div class="valor" id="totalEntradas">0</div>
+      </div>
+      <div class="stat-card">
+        <div class="rotulo">Dias com meta batida</div>
+        <div class="valor" id="diasMetaBatida">0</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ CALENDÁRIO ============ -->
+  <div class="card" id="calendario-card">
+    <div class="card-head">
+      <h2>Calendário mensal</h2>
+      <span class="sub" id="mesAtualLabel"></span>
+    </div>
+    <div id="calendario"></div>
+    <div class="legenda-cal">
+      <span><i style="background:var(--pos)"></i> Meta batida</span>
+      <span><i style="background:rgba(52,211,153,.4)"></i> Positivo</span>
+      <span><i style="background:var(--neg)"></i> Negativo</span>
+      <span><i style="background:var(--outros)"></i> Sem operação</span>
+    </div>
+  </div>
+
+  <!-- ============ GRÁFICOS ============ -->
+  <div id="graficos">
+    <div class="charts-grid">
+      <div class="card">
+        <div class="card-head"><h2>Evolução da banca</h2></div>
+        <div class="grafico-box"><canvas id="graficoBanca"></canvas></div>
+      </div>
+      <div class="card">
+        <div class="card-head"><h2>Lucro por grupo</h2></div>
+        <div class="grafico-box"><canvas id="graficoGrupos"></canvas></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head">
+        <h2>Meta batida por dia</h2>
+        <select id="filtroPeriodoMeta" class="select-periodo">
+          <option value="7">Últimos 7 dias</option>
+          <option value="10" selected>Últimos 10 dias</option>
+          <option value="todos">Todos os dias</option>
+        </select>
+      </div>
+      <div class="charts-grid-3">
+        <div>
+          <div class="subtitulo-grafico g1">Núcleo · meta R$100/dia</div>
+          <div class="grafico-box pequeno scroll-x"><div class="grafico-scroll-inner" id="innerMetaG1"><canvas id="graficoMetaG1"></canvas></div></div>
+        </div>
+        <div>
+          <div class="subtitulo-grafico g2">Ritmo · meta R$60/dia</div>
+          <div class="grafico-box pequeno scroll-x"><div class="grafico-scroll-inner" id="innerMetaG2"><canvas id="graficoMetaG2"></canvas></div></div>
+        </div>
+        <div>
+          <div class="subtitulo-grafico geral">Geral · meta R$160/dia</div>
+          <div class="grafico-box pequeno scroll-x"><div class="grafico-scroll-inner" id="innerMetaGeral"><canvas id="graficoMetaGeral"></canvas></div></div>
+        </div>
+      </div>
+      <div class="legenda-cal">
+        <span><i style="background:var(--pos)"></i> Meta batida</span>
+        <span><i style="background:var(--g2)"></i> Positivo, abaixo da meta</span>
+        <span><i style="background:var(--neg)"></i> Negativo</span>
+      </div>
+      <p class="dica-toque">Toque numa barra para ver o histórico daquele dia.</p>
+    </div>
+  </div>
+
+
+  <!-- ============ LISTA DE ENTRADAS ============ -->
+  <!-- ============ RANKINGS ============ -->
+  <div class="card" id="rankings">
+    <div class="card-head">
+      <h2>Rankings</h2>
+      <span class="sub">onde vale a pena focar</span>
+    </div>
+    <div class="filtros">
+      <button class="filtro-btn active" data-ranking="metodo-lucro">Método · Lucro</button>
+      <button class="filtro-btn" data-ranking="campeonato-lucro">Campeonato · Lucro</button>
+      <button class="filtro-btn" data-ranking="metodo-frequencia">Método · Frequência</button>
+    </div>
+    <div id="corpoRanking"></div>
+  </div>
+
+  <div class="card" id="entradas-lista">
+    <div class="card-head"><h2>Entradas registradas</h2></div>
+    <div class="filtros">
+      <button class="filtro-btn active" data-filtro="todas">Todas</button>
+      <button class="filtro-btn" data-filtro="g1">Núcleo</button>
+      <button class="filtro-btn" data-filtro="g2">Ritmo</button>
+      <button class="filtro-btn" data-filtro="outros">Outros</button>
+    </div>
+    <div class="table-wrapper">
+      <table>
+        <thead>
+          <tr>
+            <th>Data</th><th>Jogo</th><th>Grupo</th><th>Tipo</th><th>Oper.</th>
+            <th>Odd</th><th>Stake</th><th>Resultado</th><th>Lucro</th><th>Ações</th>
+          </tr>
+        </thead>
+        <tbody id="tabelaEntradas"></tbody>
+      </table>
+      <div class="empty-state" id="emptyState" style="display:none;">
+        <div class="svg-empty"><svg viewBox="0 0 24 24" width="34" height="34" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg></div>
+        Nenhuma entrada ainda. Toque no botão <strong>+</strong> para lançar a primeira.
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ============ FAB — NOVA ENTRADA ============ -->
+<button class="fab" onclick="abrirModalEntrada()" title="Nova entrada">+</button>
+
+<!-- ============ NAV INFERIOR MOBILE ============ -->
+<nav class="bottom-nav">
+  <a href="#dashboard" class="active"><span class="ic"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11.5 12 4l9 7.5"/><path d="M5 10v9a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1v-9"/></svg></span>Painel</a>
+  <a href="#calendario-card"><span class="ic"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M8 3v4M16 3v4M3 10h18"/></svg></span>Calendário</a>
+  <a href="#graficos"><span class="ic"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10M12 20V4M20 20v-7"/></svg></span>Gráficos</a>
+  <a href="#entradas-lista"><span class="ic"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg></span>Entradas</a>
+</nav>
+
+<!-- ============ MODAL: NOVA ENTRADA ============ -->
+<div class="overlay" id="overlayForm">
+  <div class="sheet">
+    <div class="sheet-head">
+      <h2 id="tituloForm">Nova entrada</h2>
+      <button class="icon-btn" onclick="fecharModalEntrada()">✕</button>
+    </div>
+
+    <form id="formEntrada">
+
+      <div class="chips" id="chipsAtalho">
+        <button type="button" class="chip g1" data-tipo="Vovô" data-stake="400">Vovô</button>
+        <button type="button" class="chip g1" data-tipo="2 Gols à Frente" data-stake="400">2 Gols à Frente</button>
+        <button type="button" class="chip g1" data-tipo="Lay Goleada" data-stake="400" data-operacao="Lay">Lay Goleada</button>
+        <button type="button" class="chip g1" data-tipo="Lay HT" data-stake="400" data-operacao="Lay">Lay HT</button>
+        <button type="button" class="chip g2" data-tipo="Match Odds - Back" data-stake="100" data-operacao="Back">Match Odds Back</button>
+        <button type="button" class="chip g2" data-tipo="Match Odds - Lay" data-stake="100" data-operacao="Lay">Match Odds Lay</button>
+        <button type="button" class="chip g2" data-tipo="Gols - Over HT" data-stake="100" data-operacao="Back">Over HT</button>
+        <button type="button" class="chip g2" data-tipo="Gols - Over FT" data-stake="100" data-operacao="Back">Over FT</button>
+      </div>
+
+      <label>Data
+        <input type="date" name="data" required>
+      </label>
+
+      <label>Jogo
+        <input type="text" name="jogo" placeholder="Ex: Brasil x Argentina" required>
+      </label>
+
+      <div class="linha-2">
+        <label>Tipo de entrada
+          <select name="tipo" id="tipo">
+            <optgroup label="Núcleo · meta 25%/dia (stake R$400)">
+              <option>Vovô</option>
+              <option>2 Gols à Frente</option>
+              <option>Lay Goleada</option>
+              <option>Lay HT</option>
+            </optgroup>
+            <optgroup label="Ritmo · meta 60%/dia (stake R$100)">
+              <option>Match Odds - Back</option>
+              <option>Match Odds - Lay</option>
+              <option>Gols - Over HT</option>
+              <option>Gols - Over FT</option>
+            </optgroup>
+            <optgroup label="Outros modelos">
+              <option>Back HT</option>
+              <option>Back FT</option>
+              <option>Lay</option>
+              <option>Under Gol HT</option>
+              <option>Under Gol FT</option>
+              <option>Lay Zebra</option>
+              <option>Cantos Limite</option>
+              <option>Under Canto Limite</option>
+              <option>Handicap</option>
+              <option>Zoião</option>
+              <option>Múltipla</option>
+            </optgroup>
+          </select>
+        </label>
+
+        <label>Operação
+          <select name="operacao" id="operacao">
+            <option>Back</option>
+            <option>Lay</option>
+          </select>
+        </label>
+      </div>
+
+      <div class="linha-2">
+        <label>Odd
+          <input type="number" step="0.01" name="odd" id="odd" required>
+        </label>
+        <label>Stake (R$)
+          <input type="number" name="stake" id="stake" value="400" required>
+        </label>
+      </div>
+
+      <div id="containerModoLay" style="display:none; margin-bottom:14px;">
+        <label>Modo do Lay
+          <select name="modoLay" id="modoLay">
+            <option value="responsabilidade">Responsabilidade fixa (recomendado)</option>
+            <option value="stake">Stake Betfair</option>
+          </select>
+        </label>
+        <p style="font-size:.72rem; color:var(--text-muted); margin:-8px 0 0; line-height:1.5;">
+          <strong style="color:var(--text);">Responsabilidade fixa:</strong> o valor que você digitar em "Stake" é o máximo que você perde se der Red — mais fácil de controlar risco.<br>
+          <strong style="color:var(--text);">Stake Betfair:</strong> o valor em "Stake" é o número exato que você digitaria no campo "Stake" dentro da própria Betfair. Nesse modo, o quanto você realmente arrisca perder (a responsabilidade) é maior que esse número — o cálculo aparece logo abaixo.
+        </p>
+      </div>
+
+      <div class="box-lay" id="boxLay"></div>
+
+      <div class="linha-2">
+        <label>Resultado
+          <select name="resultado">
+            <option>Pendente</option>
+            <option>Green</option>
+            <option>Red</option>
+            <option>Cashout</option>
+            <option>Anulada</option>
+          </select>
+        </label>
+        <label>Lucro/Prejuízo real (R$)
+          <input type="number" step="0.01" name="lucro" placeholder="calculado ou manual">
+        </label>
+      </div>
+
+      <details class="avancado">
+        <summary>Mais opções (casa, campeonato, tempo, observações) <span>▾</span></summary>
+
+        <div class="linha-2">
+          <label>Casa
+            <select name="casa">
+              <option>Betfair</option>
+              <option>Bet365</option>
+            </select>
+          </label>
+          <label>Campeonato
+            <input type="text" name="campeonato" placeholder="Ex: Brasileirão Série A">
+          </label>
+        </div>
+
+        <label>Tempo da entrada
+          <input type="text" name="tempo" placeholder="Ex: 12 min, HT, Intervalo, 65 min">
+        </label>
+
+        <label>Observações
+          <textarea name="obs" rows="2"></textarea>
+        </label>
+      </details>
+
+      <button type="submit" class="btn-primario" id="btnSalvar">Salvar entrada</button>
+    </form>
+  </div>
+</div>
+
+<!-- ============ MODAL GENÉRICO (detalhe do dia) ============ -->
+<div class="overlay" id="overlayModal">
+  <div class="sheet">
+    <div class="sheet-head">
+      <h2 id="modalTitulo">Detalhes</h2>
+      <button class="icon-btn" onclick="fecharModal()">✕</button>
+    </div>
+    <div class="modal-content" id="modalCorpo"></div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+/* ============================================================
+   CONFIGURAÇÃO GERAL
+   ============================================================ */
+const BANCA_INICIAL = 1000;
+const META_BANCA = 3000;
+
+const STAKE_G1 = 400;   const PCT_G1 = 0.25;  const META_G1 = STAKE_G1 * PCT_G1;   // R$100
+const STAKE_G2 = 100;   const PCT_G2 = 0.60;  const META_G2 = STAKE_G2 * PCT_G2;   // R$60
+const META_DIA_TOTAL = META_G1 + META_G2;    // R$160
+
+const TIPOS_G1 = new Set(['Vovô', '2 Gols à Frente', 'Lay Goleada', 'Lay HT']);
+const TIPOS_G2 = new Set(['Match Odds - Back', 'Match Odds - Lay', 'Gols - Over HT', 'Gols - Over FT']);
+
+function grupoDoTipo(tipo){
+  if (TIPOS_G1.has(tipo)) return 'g1';
+  if (TIPOS_G2.has(tipo)) return 'g2';
+  return 'outros';
+}
+function infoGrupo(key){
+  return {
+    g1: {label:'Núcleo', cls:'g1'},
+    g2: {label:'Ritmo', cls:'g2'},
+    outros: {label:'Outros', cls:'outros'}
+  }[key];
+}
+
+const URL_PLANILHA = "https://script.google.com/macros/s/AKfycbyhgQ4-CciEN7NG9TbKZo9e8V69ENfcVriYrKV3wrklfAPhZYaK4tPTbkqnRhvv-1J-/exec";
+
+let entradas = [];
+let valoresOcultos = false;
+let filtroAtual = 'todas';
+let indiceEditando = null;
+
+/* ============================================================
+   ELEMENTOS
+   ============================================================ */
+const calendario = document.getElementById('calendario');
+const tabelaEntradas = document.getElementById('tabelaEntradas');
+const tipoInput = document.getElementById('tipo');
+const modoLayInput = document.getElementById('modoLay');
+const operacaoInput = document.getElementById('operacao');
+const oddInput = document.getElementById('odd');
+const stakeInput = document.getElementById('stake');
+const boxLay = document.getElementById('boxLay');
+const resultadoInput = document.querySelector('select[name="resultado"]');
+const lucroInput = document.querySelector('input[name="lucro"]');
+
+/* ============================================================
+   TOAST (substitui alert)
+   ============================================================ */
+function toast(msg, tipo=''){
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = tipo ? `show ${tipo}` : 'show';
+  clearTimeout(el._t);
+  el._t = setTimeout(()=> el.classList.remove('show'), 2600);
+}
+
+/* ============================================================
+   MODAL — NOVA ENTRADA
+   ============================================================ */
+function abrirModalEntrada(){
+  document.getElementById('overlayForm').classList.add('open');
+}
+function fecharModalEntrada(){
+  document.getElementById('overlayForm').classList.remove('open');
+  resetarFormulario();
+}
+function resetarFormulario(){
+  const form = document.getElementById('formEntrada');
+  form.reset();
+  form.data.value = hojeISO();
+  form.stake.value = STAKE_G1;
+  operacaoInput.value = 'Back';
+  boxLay.style.display = 'none';
+  atualizarVisibilidadeModoLay();
+  indiceEditando = null;
+  document.getElementById('tituloForm').textContent = 'Nova entrada';
+  document.getElementById('btnSalvar').textContent = 'Salvar entrada';
+  document.querySelectorAll('#chipsAtalho .chip').forEach(c => c.classList.remove('active'));
+}
+
+/* MODAL genérico */
+function abrirModal(titulo, htmlCorpo){
+  document.getElementById('modalTitulo').textContent = titulo;
+  document.getElementById('modalCorpo').innerHTML = htmlCorpo;
+  document.getElementById('overlayModal').classList.add('open');
+}
+function fecharModal(){
+  document.getElementById('overlayModal').classList.remove('open');
+}
+document.querySelectorAll('.overlay').forEach(ov=>{
+  ov.addEventListener('click', e => { if (e.target === ov) ov.classList.remove('open'); });
+});
+
+/* Histórico de um dia específico dentro de um grupo (clique numa barra do gráfico de meta) */
+function abrirDetalheDiaGrupo(labelData, grupoFiltro, tituloGrupo){
+  const filtradas = entradas.filter(e=>{
+    if (!e.data) return false;
+    const dataLabel = dataDaEntrada(e).toLocaleDateString('pt-BR');
+    if (dataLabel !== labelData) return false;
+    const g = grupoDoTipo(e.tipo);
+    return grupoFiltro === 'geral' ? (g === 'g1' || g === 'g2') : (g === grupoFiltro);
+  });
+
+  const total = filtradas.reduce((s,e)=> s + (Number(e.lucro)||0), 0);
+
+  let html = '';
+  if (filtradas.length === 0){
+    html = `<p style="color:var(--text-muted)">Nenhuma entrada de ${tituloGrupo} neste dia.</p>`;
+  } else {
+    filtradas.forEach(e=>{
+      html += `<div class="entrada-item">
+        <div class="linha1"><span>${e.jogo}</span><span class="${e.lucro>=0?'positive':'negative'}">${formatarMoeda(e.lucro)}</span></div>
+        <span style="color:var(--text-muted); font-size:.78rem;">${e.tipo} · ${e.operacao} · odd ${e.odd ? e.odd.toFixed(2) : '-'} · ${e.resultado}</span>
+      </div>`;
+    });
+  }
+
+  abrirModal(`${tituloGrupo} · ${labelData} · Total ${formatarMoeda(total)}`, html);
+}
+
+/* ============================================================
+   CHIPS DE ATALHO
+   ============================================================ */
+document.querySelectorAll('#chipsAtalho .chip').forEach(chip=>{
+  chip.addEventListener('click', ()=>{
+    document.querySelectorAll('#chipsAtalho .chip').forEach(c=>c.classList.remove('active'));
+    chip.classList.add('active');
+
+    tipoInput.value = chip.dataset.tipo;
+    stakeInput.value = chip.dataset.stake;
+    if (chip.dataset.operacao) operacaoInput.value = chip.dataset.operacao;
+
+    atualizarVisibilidadeModoLay();
+    calcularResponsabilidadeLay();
+    calcularLucroAutomatico();
+    document.querySelector('input[name="jogo"]').focus();
+  });
+});
+
+/* ============================================================
+   NAV — fecha nav mobile ao navegar + marca ativo
+   ============================================================ */
+document.querySelectorAll('nav.bottom-nav a, nav.desktop-nav a').forEach(link=>{
+  link.addEventListener('click', ()=>{
+    document.querySelectorAll('nav.bottom-nav a').forEach(a=>a.classList.remove('active'));
+    const alvo = link.getAttribute('href');
+    document.querySelectorAll(`nav.bottom-nav a[href="${alvo}"]`).forEach(a=>a.classList.add('active'));
+  });
+});
+
+/* ============================================================
+   FILTROS DE LISTA
+   ============================================================ */
+document.querySelectorAll('.filtro-btn').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    document.querySelectorAll('.filtro-btn').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    filtroAtual = btn.dataset.filtro;
+    atualizarTabela();
+  });
+});
+
+/* ============================================================
+   EDITAR ENTRADA
+   ============================================================ */
+function editarEntrada(index){
+  const entrada = entradas[index];
+  indiceEditando = index;
+
+  const form = document.getElementById('formEntrada');
+  form.data.value = entrada.data ? entrada.data.substring(0,10) : hojeISO();
+  form.casa.value = entrada.casa || 'Betfair';
+  form.campeonato.value = entrada.campeonato || '';
+  form.jogo.value = entrada.jogo || '';
+  form.tempo.value = entrada.tempo || '';
+  form.tipo.value = entrada.tipo || 'Vovô';
+  form.operacao.value = entrada.operacao || 'Back';
+  form.odd.value = entrada.odd || '';
+  form.stake.value = entrada.stake || STAKE_G1;
+  form.resultado.value = entrada.resultado || 'Pendente';
+  form.lucro.value = entrada.lucro || '';
+  form.obs.value = entrada.obs || '';
+
+  document.getElementById('tituloForm').textContent = 'Editar entrada';
+  document.getElementById('btnSalvar').textContent = 'Atualizar entrada';
+
+  atualizarVisibilidadeModoLay();
+  calcularResponsabilidadeLay();
+  abrirModalEntrada();
+}
+
+/* ============================================================
+   CÁLCULOS DE LAY / LUCRO AUTOMÁTICO (lógica original preservada)
+   ============================================================ */
+function calcularLucroAutomatico(){
+  const operacao = operacaoInput.value;
+  const modoLay = modoLayInput.value;
+  const odd = Number(oddInput.value);
+  const stake = Number(stakeInput.value);
+  const resultado = resultadoInput.value;
+
+  if (!odd || !stake || resultado === 'Pendente' || resultado === 'Anulada'){
+    lucroInput.value = '';
+    return;
+  }
+
+  let lucro = 0;
+
+  if (operacao === 'Back'){
+    if (resultado === 'Green') lucro = stake * (odd - 1);
+    if (resultado === 'Red') lucro = -stake;
+  }
+
+  if (operacao === 'Lay'){
+    if (modoLay === 'responsabilidade'){
+      const responsabilidade = stake;
+      const lucroLay = responsabilidade / (odd - 1);
+      lucro = resultado === 'Green' ? lucroLay : -responsabilidade;
+    }
+    if (modoLay === 'stake'){
+      const responsabilidade = stake * (odd - 1);
+      lucro = resultado === 'Green' ? stake : -responsabilidade;
+    }
+  }
+
+  if (resultado === 'Cashout') return;
+
+  lucroInput.value = lucro.toFixed(2);
+}
+
+function atualizarVisibilidadeModoLay(){
+  document.getElementById('containerModoLay').style.display = (operacaoInput.value === 'Lay') ? 'block' : 'none';
+}
+
+function calcularResponsabilidadeLay(){
+  const operacao = operacaoInput.value;
+  const modoLay = modoLayInput.value;
+  const odd = Number(oddInput.value);
+  const stake = Number(stakeInput.value);
+
+  if (operacao === 'Lay' && odd > 1 && stake > 0){
+    let responsabilidade, lucroLay;
+    if (modoLay === 'responsabilidade'){
+      responsabilidade = stake;
+      lucroLay = responsabilidade / (odd - 1);
+    } else {
+      lucroLay = stake;
+      responsabilidade = stake * (odd - 1);
+    }
+    boxLay.style.display = 'block';
+    boxLay.innerHTML = `Lay · ${modoLay === 'responsabilidade' ? 'Responsabilidade fixa' : 'Stake Betfair'}<br>
+      GREEN: ${formatarMoeda(lucroLay)} · RED: ${formatarMoeda(responsabilidade)}`;
+  } else {
+    boxLay.style.display = 'none';
+    boxLay.innerHTML = '';
+  }
+}
+
+tipoInput.addEventListener('change', ()=>{
+  const g = grupoDoTipo(tipoInput.value);
+  if (g === 'g1') stakeInput.value = STAKE_G1;
+  if (g === 'g2') stakeInput.value = STAKE_G2;
+  atualizarVisibilidadeModoLay();
+  calcularResponsabilidadeLay();
+  calcularLucroAutomatico();
+});
+modoLayInput.addEventListener('change', ()=>{ calcularResponsabilidadeLay(); calcularLucroAutomatico(); });
+operacaoInput.addEventListener('change', ()=>{ atualizarVisibilidadeModoLay(); calcularResponsabilidadeLay(); calcularLucroAutomatico(); });
+oddInput.addEventListener('input', ()=>{ calcularResponsabilidadeLay(); calcularLucroAutomatico(); });
+stakeInput.addEventListener('input', ()=>{ calcularResponsabilidadeLay(); calcularLucroAutomatico(); });
+resultadoInput.addEventListener('change', calcularLucroAutomatico);
+
+/* ============================================================
+   PERSISTÊNCIA (Google Sheets via Apps Script) — inalterado
+   ============================================================ */
+async function carregarEntradasDaPlanilha(){
+  try{
+    const resposta = await fetch(URL_PLANILHA);
+    const dados = await resposta.json();
+
+    entradas = dados.map(e => ({
+      id: e.ID,
+      data: e.Data,
+      casa: e.Casa,
+      campeonato: e.Campeonato,
+      jogo: e.Jogo,
+      tempo: e.Tempo,
+      tipo: e.Tipo,
+      operacao: e.Operação,
+      odd: Number(e.Odd),
+      stake: Number(e.Stake),
+      responsabilidade: Number(e.Responsabilidade),
+      resultado: e.Resultado,
+      lucro: Number(e.Lucro),
+      obs: e.Observações
+    })).sort((a,b) => new Date(b.data) - new Date(a.data));
+
+    atualizarTudo();
+  } catch(erro){
+    toast('Erro ao carregar dados da planilha.', 'erro');
+    console.error(erro);
+  }
+}
+
+async function salvarEntradaNaPlanilha(novaEntrada){
+  try{
+    await fetch(URL_PLANILHA, {
+      method:'POST', mode:'no-cors',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify(novaEntrada)
+    });
+  } catch(erro){
+    toast('Erro ao salvar na planilha.', 'erro');
+    console.error(erro);
+  }
+}
+
+async function atualizarEntradaCompletaNaPlanilha(entrada){
+  await fetch(URL_PLANILHA, {
+    method:'POST', mode:'no-cors',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ acao:'atualizarTudo', ...entrada })
+  });
+}
+
+async function removerEntrada(index){
+  const entrada = entradas[index];
+  const confirmar = confirm(`Remover esta entrada?\n\n${entrada.jogo} | ${entrada.tipo}`);
+  if (!confirmar) return;
+
+  await fetch(URL_PLANILHA, {
+    method:'POST', mode:'no-cors',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ acao:'remover', id: entrada.id })
+  });
+
+  await carregarEntradasDaPlanilha();
+  toast('Entrada removida.', 'sucesso');
+}
+
+document.getElementById('formEntrada').addEventListener('submit', async function(event){
+  event.preventDefault();
+  const form = new FormData(this);
+
+  const operacao = form.get('operacao');
+  const odd = Number(form.get('odd'));
+  const stake = Number(form.get('stake'));
+  const modoLay = form.get('modoLay');
+
+  let responsabilidade = stake;
+  if (operacao === 'Lay' && odd > 1){
+    responsabilidade = modoLay === 'responsabilidade' ? stake : stake * (odd - 1);
+  }
+
+  let lucroDigitado = form.get('lucro') === '' ? 0 : Number(form.get('lucro'));
+  const resultadoSelecionado = form.get('resultado');
+  if (resultadoSelecionado === 'Red') lucroDigitado = -Math.abs(lucroDigitado);
+  if (resultadoSelecionado === 'Green') lucroDigitado = Math.abs(lucroDigitado);
+
+  const novaEntrada = {
+    data: form.get('data'),
+    casa: form.get('casa'),
+    campeonato: form.get('campeonato'),
+    jogo: form.get('jogo'),
+    tempo: form.get('tempo'),
+    tipo: form.get('tipo'),
+    operacao: operacao,
+    odd: odd,
+    stake: stake,
+    responsabilidade: responsabilidade,
+    resultado: resultadoSelecionado,
+    lucro: lucroDigitado,
+    obs: form.get('obs')
+  };
+
+  if (indiceEditando !== null){
+    novaEntrada.id = entradas[indiceEditando].id;
+    await atualizarEntradaCompletaNaPlanilha(novaEntrada);
+    fecharModalEntrada();
+    await carregarEntradasDaPlanilha();
+    toast('Entrada atualizada!', 'sucesso');
+    return;
+  }
+
+  await salvarEntradaNaPlanilha(novaEntrada);
+  fecharModalEntrada();
+  await carregarEntradasDaPlanilha();
+  toast('Entrada salva!', 'sucesso');
+});
+
+/* ============================================================
+   HELPERS
+   ============================================================ */
+function hojeISO(){
+  const d = new Date();
+  return d.toISOString().substring(0,10);
+}
+function formatarMoeda(valor){
+  return (valor || 0).toLocaleString('pt-BR', { style:'currency', currency:'BRL' });
+}
+function alternarValores(){
+  valoresOcultos = !valoresOcultos;
+  document.querySelectorAll('.valor-financeiro').forEach(item=>{
+    item.innerText = valoresOcultos ? 'R$ ••••••' : item.dataset.valor;
+  });
+  const topo = document.getElementById('bancaAtualTopo');
+  topo.innerText = valoresOcultos ? 'R$ ••••••' : topo.dataset.valor;
+
+  const btnOlho = document.getElementById('btnOlho');
+  btnOlho.innerHTML = valoresOcultos
+    ? '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.94 10.94 0 0 1 12 19c-7 0-11-7-11-7a21.6 21.6 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 7 11 7a21.6 21.6 0 0 1-2.16 3.19M14.12 14.12a3 3 0 1 1-4.24-4.24"/><path d="M1 1l22 22"/></svg>'
+    : '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7Z"/><circle cx="12" cy="12" r="3"/></svg>';
+}
+function dataDaEntrada(e){
+  if (typeof e.data === 'string' && e.data.includes('T')) return new Date(e.data);
+  return new Date(e.data + 'T00:00:00');
+}
+function ehMesmoDia(data, d, m, a){
+  return data.getDate() === d && data.getMonth() === m && data.getFullYear() === a;
+}
+
+/* ============================================================
+   ATUALIZAÇÃO — META DO DIA
+   ============================================================ */
+function atualizarMetaHoje(){
+  const hoje = new Date();
+  const entradasHoje = entradas.filter(e => e.data && ehMesmoDia(dataDaEntrada(e), hoje.getDate(), hoje.getMonth(), hoje.getFullYear()));
+
+  const lucroG1 = entradasHoje.filter(e => grupoDoTipo(e.tipo) === 'g1').reduce((s,e)=> s + (Number(e.lucro)||0), 0);
+  const lucroG2 = entradasHoje.filter(e => grupoDoTipo(e.tipo) === 'g2').reduce((s,e)=> s + (Number(e.lucro)||0), 0);
+  const total = lucroG1 + lucroG2;
+
+  document.getElementById('valorHojeHeader').textContent = formatarMoeda(total);
+  document.getElementById('valorG1Hoje').textContent = formatarMoeda(lucroG1);
+  document.getElementById('valorG2Hoje').textContent = formatarMoeda(lucroG2);
+
+  const pctTotal = Math.max(0, Math.min(100, (total / META_DIA_TOTAL) * 100));
+  const pctG1 = Math.max(0, Math.min(100, (lucroG1 / META_G1) * 100));
+  const pctG2 = Math.max(0, Math.min(100, (lucroG2 / META_G2) * 100));
+
+  document.getElementById('barraMetaTotal').style.width = pctTotal + '%';
+  document.getElementById('barraG1').style.width = pctG1 + '%';
+  document.getElementById('barraG2').style.width = pctG2 + '%';
+
+  const pill = document.getElementById('statusPillHoje');
+  if (entradasHoje.length === 0){
+    pill.textContent = 'Sem operação'; pill.className = 'status-pill zerado';
+  } else if (total >= META_DIA_TOTAL){
+    pill.textContent = 'Meta batida'; pill.className = 'status-pill batida';
+  } else if (total > 0){
+    pill.textContent = 'Em andamento'; pill.className = 'status-pill andamento';
+  } else if (total === 0){
+    pill.textContent = 'Zerado'; pill.className = 'status-pill zerado';
+  } else {
+    pill.textContent = 'Negativo'; pill.className = 'status-pill negativo';
+  }
+}
+
+/* ============================================================
+   ATUALIZAÇÃO — DASHBOARD GERAL
+   ============================================================ */
+function atualizarDashboard(){
+  const lucroTotal = entradas.reduce((total, e) => total + (Number(e.lucro)||0), 0);
+  const bancaAtual = BANCA_INICIAL + lucroTotal;
+
+  const greens = entradas.filter(e => e.resultado === 'Green').length;
+  const reds = entradas.filter(e => e.resultado === 'Red').length;
+  const decididas = greens + reds;
+  const taxa = decididas > 0 ? ((greens / decididas) * 100).toFixed(1) : 0;
+
+  document.getElementById('bancaAtualTopo').dataset.valor = formatarMoeda(bancaAtual);
+  document.getElementById('bancaAtualTopo').innerText = valoresOcultos ? 'R$ ••••••' : formatarMoeda(bancaAtual);
+
+  document.getElementById('lucroTotal').dataset.valor = formatarMoeda(lucroTotal);
+  document.getElementById('lucroTotal').innerText = valoresOcultos ? 'R$ ••••••' : formatarMoeda(lucroTotal);
+  document.getElementById('lucroTotal').className = 'valor valor-financeiro ' + (lucroTotal >= 0 ? 'positive' : 'negative');
+
+  document.getElementById('taxaAcerto').textContent = taxa + '%';
+  document.getElementById('totalEntradas').textContent = entradas.length;
+
+  // progresso da banca 1000 -> 3000
+  const pctBanca = Math.max(0, Math.min(100, ((bancaAtual - BANCA_INICIAL) / (META_BANCA - BANCA_INICIAL)) * 100));
+  document.getElementById('trilhoFill').style.width = pctBanca + '%';
+  document.getElementById('progressoPct').textContent = pctBanca.toFixed(1) + '% da meta';
+
+  // dias com meta batida
+  const porDia = {};
+  entradas.forEach(e=>{
+    if (!e.data) return;
+    const d = dataDaEntrada(e);
+    const key = `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+    porDia[key] = (porDia[key] || 0) + (Number(e.lucro)||0);
+  });
+  const diasBatidos = Object.values(porDia).filter(v => v >= META_DIA_TOTAL).length;
+  document.getElementById('diasMetaBatida').textContent = diasBatidos;
+
+  atualizarMetaHoje();
+}
+
+/* ============================================================
+   ATUALIZAÇÃO — CALENDÁRIO
+   ============================================================ */
+function calcularLucroPorDia(){
+  const resultado = {};
+  entradas.forEach(e=>{
+    if (!e.data) return;
+    const dia = dataDaEntrada(e).getDate();
+    resultado[dia] = (resultado[dia] || 0) + (Number(e.lucro) || 0);
+  });
+  return resultado;
+}
+
+const MESES = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+
+function atualizarCalendario(){
+  calendario.innerHTML = '';
+  const hoje = new Date();
+  const ano = hoje.getFullYear();
+  const mes = hoje.getMonth();
+  document.getElementById('mesAtualLabel').textContent = `${MESES[mes]} ${ano}`;
+
+  const primeiroDiaMes = new Date(ano, mes, 1);
+  const ultimoDiaMes = new Date(ano, mes + 1, 0);
+  const nomesDias = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
+
+  nomesDias.forEach(nome=>{
+    const cab = document.createElement('div');
+    cab.className = 'dia-semana';
+    cab.innerText = nome;
+    calendario.appendChild(cab);
+  });
+
+  for (let i=0; i<primeiroDiaMes.getDay(); i++){
+    const vazio = document.createElement('div');
+    vazio.className = 'dia-vazio';
+    calendario.appendChild(vazio);
+  }
+
+  const dadosDias = calcularLucroPorDia();
+
+  for (let dia=1; dia<=ultimoDiaMes.getDate(); dia++){
+    const div = document.createElement('div');
+    div.className = 'dia';
+
+    const lucroDia = dadosDias[dia] || 0;
+    const temEntradas = dadosDias.hasOwnProperty(dia);
+
+    if (!temEntradas) div.classList.add('neutro');
+    else if (lucroDia >= META_DIA_TOTAL) div.classList.add('meta-batida');
+    else if (lucroDia > 0) div.classList.add('positivo');
+    else if (lucroDia < 0) div.classList.add('negativo');
+    else div.classList.add('neutro');
+
+    if (dia === hoje.getDate()) div.classList.add('hoje');
+
+    div.innerHTML = `<span class="num">${dia}</span>${temEntradas ? `<span class="val">${formatarMoeda(lucroDia)}</span>` : ''}`;
+
+    div.addEventListener('click', ()=>{
+      const entradasDia = entradas.filter(e => e.data && ehMesmoDia(dataDaEntrada(e), dia, mes, ano));
+      if (entradasDia.length === 0){
+        abrirModal(`${dia} de ${MESES[mes]}`, `<p style="color:var(--text-muted)">Nenhuma entrada neste dia.</p>`);
+        return;
+      }
+      let html = '';
+      entradasDia.forEach(e=>{
+        const g = infoGrupo(grupoDoTipo(e.tipo));
+        html += `<div class="entrada-item">
+          <div class="linha1"><span>${e.jogo}</span><span class="${e.lucro>=0?'positive':'negative'}">${formatarMoeda(e.lucro)}</span></div>
+          <span class="badge ${g.cls}">${g.label}</span> <span style="color:var(--text-muted); font-size:.78rem;">${e.tipo} · ${e.operacao} · ${e.resultado}</span>
+        </div>`;
+      });
+      abrirModal(`${dia} de ${MESES[mes]} · Total ${formatarMoeda(lucroDia)}`, html);
+    });
+
+    calendario.appendChild(div);
+  }
+}
+
+/* ============================================================
+   ATUALIZAÇÃO — TABELA / LISTA
+   ============================================================ */
+function atualizarTabela(){
+  tabelaEntradas.innerHTML = '';
+
+  const filtradas = entradas
+    .map((e, idxOriginal) => ({...e, idxOriginal}))
+    .filter(e => filtroAtual === 'todas' || grupoDoTipo(e.tipo) === filtroAtual);
+
+  document.getElementById('emptyState').style.display = filtradas.length === 0 ? 'block' : 'none';
+
+  filtradas.forEach(e=>{
+    const index = e.idxOriginal;
+    const g = infoGrupo(grupoDoTipo(e.tipo));
+    const dataFormatada = e.data ? new Date(e.data).toLocaleDateString('pt-BR') : '-';
+
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td data-label="Data">${dataFormatada}</td>
+      <td data-label="Jogo">${e.jogo}</td>
+      <td data-label="Grupo"><span class="badge ${g.cls}">${g.label}</span></td>
+      <td data-label="Tipo">${e.tipo}</td>
+      <td data-label="Operação">${e.operacao}</td>
+      <td data-label="Odd">${e.odd ? e.odd.toFixed(2) : '-'}</td>
+      <td data-label="Stake">${formatarMoeda(e.stake || 0)}</td>
+      <td data-label="Resultado">${e.resultado || 'Pendente'}</td>
+      <td data-label="Lucro" class="${e.lucro>=0?'positive':'negative'}">${formatarMoeda(e.lucro || 0)}</td>
+      <td class="linha-acoes">
+        <button class="acoes-btn" onclick="editarEntrada(${index})">Editar</button>
+        <button class="acoes-btn remover" onclick="removerEntrada(${index})">Remover</button>
+      </td>
+    `;
+    tabelaEntradas.appendChild(tr);
+  });
+}
+
+/* ============================================================
+   RANKINGS — melhores/piores por campeonato e método + frequência
+   ============================================================ */
+let rankingAtual = 'metodo-lucro';
+
+function construirRanking(campo){
+  // campo: 'tipo' ou 'campeonato'
+  const grupos = {};
+  entradas.forEach(e=>{
+    let chave = campo === 'tipo' ? e.tipo : (e.campeonato || '').trim();
+    if (!chave) return; // ignora entradas sem campeonato informado
+    if (!grupos[chave]) grupos[chave] = { nome: chave, lucro:0, contagem:0, greens:0, reds:0 };
+    grupos[chave].lucro += Number(e.lucro) || 0;
+    grupos[chave].contagem += 1;
+    if (e.resultado === 'Green') grupos[chave].greens += 1;
+    if (e.resultado === 'Red') grupos[chave].reds += 1;
+  });
+  return Object.values(grupos);
+}
+
+function linhaRanking(item, posicao, campo){
+  const decididas = item.greens + item.reds;
+  const taxa = decididas > 0 ? ((item.greens / decididas) * 100).toFixed(0) : '-';
+  return `
+    <div class="ranking-linha" onclick="abrirDetalheCampo('${campo}', ${JSON.stringify(item.nome).replace(/"/g,'&quot;')}, '${campo === 'tipo' ? 'Método' : 'Campeonato'}')">
+      <span class="ranking-pos">${posicao}</span>
+      <div class="ranking-info">
+        <div class="ranking-nome">${item.nome}</div>
+        <div class="ranking-sub">${item.contagem} entrada${item.contagem>1?'s':''}${taxa !== '-' ? ' · ' + taxa + '% acerto' : ''}</div>
+      </div>
+      <span class="ranking-valor ${item.lucro>=0?'positive':'negative'}">${formatarMoeda(item.lucro)}</span>
+    </div>`;
+}
+
+function renderizarRankingLucro(campo){
+  const lista = construirRanking(campo).sort((a,b)=> b.lucro - a.lucro);
+  const corpo = document.getElementById('corpoRanking');
+
+  if (lista.length === 0){
+    corpo.innerHTML = `<div class="ranking-vazio">Sem dados suficientes ainda.</div>`;
+    return;
+  }
+
+  if (lista.length <= 10){
+    corpo.innerHTML = `<div>${lista.map((item,i)=> linhaRanking(item, i+1, campo)).join('')}</div>`;
+    return;
+  }
+
+  const melhores = lista.slice(0, 5);
+  const piores = lista.slice(-5).reverse();
+  corpo.innerHTML = `
+    <div class="ranking-colunas">
+      <div>
+        <div class="ranking-titulo-coluna melhores">Melhores</div>
+        ${melhores.map((item,i)=> linhaRanking(item, i+1, campo)).join('')}
+      </div>
+      <div>
+        <div class="ranking-titulo-coluna piores">Piores</div>
+        ${piores.map((item,i)=> linhaRanking(item, i+1, campo)).join('')}
+      </div>
+    </div>`;
+}
+
+function renderizarRankingFrequencia(){
+  const lista = construirRanking('tipo').sort((a,b)=> b.contagem - a.contagem);
+  const corpo = document.getElementById('corpoRanking');
+
+  if (lista.length === 0){
+    corpo.innerHTML = `<div class="ranking-vazio">Sem dados suficientes ainda.</div>`;
+    return;
+  }
+
+  const max = Math.max(...lista.map(l=>l.contagem));
+  corpo.innerHTML = lista.map((item, i)=>{
+    const g = infoGrupo(grupoDoTipo(item.nome));
+    const pct = (item.contagem / max) * 100;
+    const corBarra = g.cls === 'g1' ? 'var(--g1)' : g.cls === 'g2' ? 'var(--g2)' : 'var(--outros)';
+    return `
+      <div class="ranking-linha" onclick="abrirDetalheCampo('tipo', ${JSON.stringify(item.nome).replace(/"/g,'&quot;')}, 'Método')">
+        <span class="ranking-pos">${i+1}</span>
+        <div class="ranking-info">
+          <div class="ranking-nome"><span class="badge ${g.cls}">${g.label}</span> ${item.nome}</div>
+          <div class="ranking-freq-barra"><span style="width:${pct}%; background:${corBarra};"></span></div>
+        </div>
+        <span class="ranking-valor">${item.contagem}×</span>
+      </div>`;
+  }).join('');
+}
+
+function atualizarRanking(){
+  if (rankingAtual === 'metodo-lucro') renderizarRankingLucro('tipo');
+  else if (rankingAtual === 'campeonato-lucro') renderizarRankingLucro('campeonato');
+  else if (rankingAtual === 'metodo-frequencia') renderizarRankingFrequencia();
+}
+
+document.querySelectorAll('#rankings .filtro-btn').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    document.querySelectorAll('#rankings .filtro-btn').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    rankingAtual = btn.dataset.ranking;
+    atualizarRanking();
+  });
+});
+
+/* Histórico completo de um método ou campeonato (clique numa linha do ranking) */
+function abrirDetalheCampo(campo, valor, rotulo){
+  const filtradas = entradas
+    .filter(e => (campo === 'tipo' ? e.tipo : (e.campeonato||'').trim()) === valor)
+    .sort((a,b)=> dataDaEntrada(b) - dataDaEntrada(a));
+
+  const total = filtradas.reduce((s,e)=> s + (Number(e.lucro)||0), 0);
+
+  let html = '';
+  filtradas.forEach(e=>{
+    const dataFormatada = e.data ? new Date(e.data).toLocaleDateString('pt-BR') : '-';
+    html += `<div class="entrada-item">
+      <div class="linha1"><span>${e.jogo}</span><span class="${e.lucro>=0?'positive':'negative'}">${formatarMoeda(e.lucro)}</span></div>
+      <span style="color:var(--text-muted); font-size:.78rem;">${dataFormatada} · ${e.tipo} · ${e.operacao} · ${e.resultado}</span>
+    </div>`;
+  });
+
+  abrirModal(`${rotulo}: ${valor} · Total ${formatarMoeda(total)}`, html);
+}
+
+/* ============================================================
+   ATUALIZAÇÃO — GRÁFICOS
+   ============================================================ */
+let graficoBanca, graficoGrupos, graficoMetaG1, graficoMetaG2, graficoMetaGeral;
+
+const pluginLinhaMeta = {
+  id:'linhaMeta',
+  afterDraw(chart){
+    const opts = chart.config.options?.plugins?.linhaMeta;
+    if (!opts || !opts.valor || !chart.scales?.y) return;
+    const { ctx, chartArea, scales } = chart;
+    const y = scales.y.getPixelForValue(opts.valor);
+    if (y < chartArea.top || y > chartArea.bottom) return;
+    ctx.save();
+    ctx.strokeStyle = opts.cor || '#E8B84B';
+    ctx.setLineDash([5,4]);
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(chartArea.left, y);
+    ctx.lineTo(chartArea.right, y);
+    ctx.stroke();
+    ctx.restore();
+  }
+};
+Chart.register(pluginLinhaMeta);
+
+function construirLucroPorDiaGrupo(grupoFiltro){
+  const porDia = {};
+  entradas.forEach(e=>{
+    if (!e.data) return;
+    const grupo = grupoDoTipo(e.tipo);
+    if (grupoFiltro === 'geral'){
+      if (grupo !== 'g1' && grupo !== 'g2') return;
+    } else if (grupo !== grupoFiltro){
+      return;
+    }
+    const d = dataDaEntrada(e);
+    const chave = d.toLocaleDateString('pt-BR');
+    const ts = new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+    if (!porDia[chave]) porDia[chave] = { valor:0, ts };
+    porDia[chave].valor += Number(e.lucro) || 0;
+  });
+  const chaves = Object.keys(porDia).sort((a,b)=> porDia[a].ts - porDia[b].ts);
+  return { labels: chaves, valores: chaves.map(k => porDia[k].valor) };
+}
+
+let periodoMetaDias = 10; // 7 | 10 | 'todos'
+
+function corBarraMeta(valor, meta){
+  if (valor >= meta) return '#34D399';
+  if (valor > 0) return '#E8B84B';
+  return '#F0616B';
+}
+
+function criarOuAtualizarGraficoMeta(instanciaAtual, canvasId, grupoFiltro, meta, corLinha, tituloGrupo){
+  if (instanciaAtual) instanciaAtual.destroy();
+  let { labels, valores } = construirLucroPorDiaGrupo(grupoFiltro);
+
+  if (periodoMetaDias !== 'todos'){
+    labels = labels.slice(-periodoMetaDias);
+    valores = valores.slice(-periodoMetaDias);
+  }
+
+  // ajusta a largura interna pra caber uma barra por dia sem apertar, com scroll horizontal quando necessário
+  const larguraPorBarra = 46;
+  const inner = document.getElementById(`inner${canvasId.replace('grafico','')}`);
+  if (inner){
+    const larguraNecessaria = labels.length * larguraPorBarra;
+    inner.style.width = larguraNecessaria > inner.parentElement.clientWidth ? larguraNecessaria + 'px' : '100%';
+  }
+
+  const cores = valores.map(v => corBarraMeta(v, meta));
+
+  return new Chart(document.getElementById(canvasId), {
+    type:'bar',
+    data:{ labels, datasets:[{ data: valores, backgroundColor: cores, borderRadius:4, maxBarThickness:30 }] },
+    plugins:[pluginRotulos],
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      layout:{ padding:{ top:20 } },
+      onClick:(evento, elementos, chart)=>{
+        if (!elementos.length) return;
+        const idx = elementos[0].index;
+        abrirDetalheDiaGrupo(chart.data.labels[idx], grupoFiltro, tituloGrupo);
+      },
+      onHover:(evento, elementos)=>{
+        evento.native.target.style.cursor = elementos.length ? 'pointer' : 'default';
+      },
+      plugins:{
+        legend:{ display:false },
+        linhaMeta:{ valor: meta, cor: corLinha }
+      },
+      scales:{
+        x:{ ticks:{ color:'#8A93A3', autoSkip:false, maxRotation:60, minRotation:60, font:{ size:9 } }, grid:{ display:false } },
+        y:{ ticks:{ color:'#8A93A3', font:{ size:10 } }, grid:{ color:'#262D38' } }
+      }
+    }
+  });
+}
+
+const pluginRotulos = {
+  id: 'pluginRotulos',
+  afterDatasetsDraw(chart){
+    const { ctx } = chart;
+    chart.data.datasets.forEach((dataset, datasetIndex)=>{
+      const meta = chart.getDatasetMeta(datasetIndex);
+      const ehPizza = (chart.config.type === 'doughnut' || chart.config.type === 'pie');
+
+      meta.data.forEach((elemento, index)=>{
+        // Para a pizza, o "data" pode ter sido ajustado (valor absoluto) só pra calcular o tamanho da fatia.
+        // O rótulo mostrado usa sempre o valor real (dataset.valoresReais), nunca o valor ajustado.
+        const valorReal = (ehPizza && dataset.valoresReais) ? dataset.valoresReais[index] : dataset.data[index];
+        if (valorReal === undefined || valorReal === null) return;
+
+        let pos;
+        if (ehPizza){
+          // Pula rótulo de fatias muito finas — evita sobreposição de texto entre fatias vizinhas
+          const angulo = Math.abs(elemento.endAngle - elemento.startAngle);
+          if (angulo < 0.35) return;
+          pos = elemento.getCenterPoint();
+        } else if (chart.config.type === 'bar'){
+          pos = { x: elemento.x, y: elemento.y - 12 };
+        } else {
+          pos = { x: elemento.x, y: elemento.y - 10 };
+        }
+
+        ctx.save();
+        ctx.textAlign = 'center';
+
+        if (ehPizza){
+          ctx.fillStyle = '#0A0D12';
+          ctx.font = 'bold 12px Space Grotesk, Arial';
+        } else {
+          ctx.fillStyle = '#EDEFF3';
+          ctx.font = 'bold 11px Inter, Arial';
+        }
+
+        ctx.fillText(formatarMoeda(valorReal), pos.x, pos.y);
+        ctx.restore();
+      });
+    });
+  }
+};
+
+function atualizarGraficos(){
+  const lucroPorDia = {};
+  entradas.forEach(e=>{
+    const lucro = Number(e.lucro) || 0;
+    let dataFormatada = '-';
+    if (e.data){ dataFormatada = new Date(e.data).toLocaleDateString('pt-BR'); }
+    lucroPorDia[dataFormatada] = (lucroPorDia[dataFormatada] || 0) + lucro;
+  });
+
+  const diasOrdenados = Object.keys(lucroPorDia).sort((a,b)=>{
+    const [da,ma,aa] = a.split('/'); const [db,mb,ab] = b.split('/');
+    return new Date(`${aa}-${ma}-${da}`) - new Date(`${ab}-${mb}-${db}`);
+  });
+
+  let banca = BANCA_INICIAL;
+  const bancaPorDia = diasOrdenados.map(dia => banca += lucroPorDia[dia]);
+
+  if (graficoBanca) graficoBanca.destroy();
+  graficoBanca = new Chart(document.getElementById('graficoBanca'), {
+    type:'line',
+    data:{
+      labels: diasOrdenados,
+      datasets:[{
+        label:'Banca (R$)',
+        data: bancaPorDia,
+        borderColor:'#E8B84B',
+        backgroundColor:'rgba(232,184,75,.12)',
+        fill:true, tension:.35, pointRadius:3, pointBackgroundColor:'#E8B84B'
+      }]
+    },
+    plugins:[pluginRotulos],
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      layout:{ padding:{ top:20 } },
+      plugins:{ legend:{ display:false } },
+      scales:{
+        x:{ ticks:{ color:'#8A93A3', maxRotation:45, minRotation:45 }, grid:{ color:'#262D38' } },
+        y:{ ticks:{ color:'#8A93A3' }, grid:{ color:'#262D38' } }
+      }
+    }
+  });
+
+  const gruposPizza = [
+    { chave:'g1', label:'Núcleo', cor:'#6C8EF5', lucro: entradas.filter(e=>grupoDoTipo(e.tipo)==='g1').reduce((s,e)=>s+(Number(e.lucro)||0),0), contagem: entradas.filter(e=>grupoDoTipo(e.tipo)==='g1').length },
+    { chave:'g2', label:'Ritmo', cor:'#E8B84B', lucro: entradas.filter(e=>grupoDoTipo(e.tipo)==='g2').reduce((s,e)=>s+(Number(e.lucro)||0),0), contagem: entradas.filter(e=>grupoDoTipo(e.tipo)==='g2').length },
+    { chave:'outros', label:'Outros', cor:'#7A8394', lucro: entradas.filter(e=>grupoDoTipo(e.tipo)==='outros').reduce((s,e)=>s+(Number(e.lucro)||0),0), contagem: entradas.filter(e=>grupoDoTipo(e.tipo)==='outros').length }
+  ].filter(g => g.contagem > 0);
+
+  if (graficoGrupos) graficoGrupos.destroy();
+  graficoGrupos = new Chart(document.getElementById('graficoGrupos'), {
+    type:'doughnut',
+    data:{
+      labels: gruposPizza.map(g=>g.label),
+      datasets:[{
+        // "data" define o TAMANHO da fatia (sempre positivo). valoresReais guarda o número exibido no rótulo (pode ser negativo).
+        data: gruposPizza.map(g => Math.max(Math.abs(g.lucro), 0.01)),
+        valoresReais: gruposPizza.map(g => g.lucro),
+        backgroundColor: gruposPizza.map(g=>g.cor),
+        borderColor:'#12161D', borderWidth:3
+      }]
+    },
+    plugins:[pluginRotulos],
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{ position:'bottom', labels:{ color:'#8A93A3', padding:14, font:{ size:11 } } } }
+    }
+  });
+
+  atualizarGraficosMeta();
+}
+
+function atualizarGraficosMeta(){
+  graficoMetaG1 = criarOuAtualizarGraficoMeta(graficoMetaG1, 'graficoMetaG1', 'g1', META_G1, '#6C8EF5', 'Núcleo');
+  graficoMetaG2 = criarOuAtualizarGraficoMeta(graficoMetaG2, 'graficoMetaG2', 'g2', META_G2, '#E8B84B', 'Ritmo');
+  graficoMetaGeral = criarOuAtualizarGraficoMeta(graficoMetaGeral, 'graficoMetaGeral', 'geral', META_DIA_TOTAL, '#34D399', 'Geral');
+}
+
+document.getElementById('filtroPeriodoMeta').addEventListener('change', function(){
+  periodoMetaDias = this.value === 'todos' ? 'todos' : Number(this.value);
+  atualizarGraficosMeta();
+});
+
+/* ============================================================
+   INIT
+   ============================================================ */
+function atualizarTudo(){
+  atualizarDashboard();
+  atualizarCalendario();
+  atualizarTabela();
+  atualizarGraficos();
+  atualizarRanking();
+}
+
+document.querySelector('input[name="data"]').value = hojeISO();
+carregarEntradasDaPlanilha();
+</script>
+
+</body>
+</html>
