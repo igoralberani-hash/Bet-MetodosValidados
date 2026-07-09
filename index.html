@@ -1033,10 +1033,20 @@ function calcularResponsabilidadeLay(){
   }
 }
 
+function operacaoSugeridaPorTipo(tipo){
+  if (/lay/i.test(tipo)) return 'Lay';
+  if (tipo === 'Match Odds - Back') return 'Back';
+  return null; // tipos ambíguos (Vovô, 2 Gols à Frente, Over HT/FT, Handicap, etc.) não mexem na Operação sozinhos
+}
+
 tipoInput.addEventListener('change', ()=>{
   const g = grupoDoTipo(tipoInput.value);
   if (g === 'g1') stakeInput.value = STAKE_G1;
   if (g === 'g2') stakeInput.value = STAKE_G2;
+
+  const sugestao = operacaoSugeridaPorTipo(tipoInput.value);
+  if (sugestao) operacaoInput.value = sugestao;
+
   atualizarVisibilidadeModoLay();
   calcularResponsabilidadeLay();
   calcularLucroAutomatico();
