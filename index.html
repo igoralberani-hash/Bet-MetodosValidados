@@ -586,12 +586,23 @@ nav.bottom-nav a.active{color:var(--g2);}
   </div>
 
   <div class="card" id="entradas-lista">
-    <div class="card-head"><h2>Entradas registradas</h2></div>
-    <div class="filtros">
+    <div class="card-head">
+      <h2>Entradas registradas</h2>
+      <span class="sub">mais recentes primeiro</span>
+    </div>
+    <div class="filtros" id="filtrosGrupoEntradas">
       <button class="filtro-btn active" data-filtro="todas">Todas</button>
       <button class="filtro-btn" data-filtro="g1">Núcleo</button>
       <button class="filtro-btn" data-filtro="g2">Ritmo</button>
       <button class="filtro-btn" data-filtro="outros">Outros</button>
+    </div>
+    <div class="filtros" id="filtrosStatusEntradas">
+      <button class="filtro-btn active" data-status="todos">Todos os status</button>
+      <button class="filtro-btn" data-status="Pendente">Pendente</button>
+      <button class="filtro-btn" data-status="Green">Green</button>
+      <button class="filtro-btn" data-status="Red">Red</button>
+      <button class="filtro-btn" data-status="Cashout">Cashout</button>
+      <button class="filtro-btn" data-status="Anulada">Anulada</button>
     </div>
     <div class="table-wrapper">
       <table>
@@ -675,6 +686,7 @@ nav.bottom-nav a.active{color:var(--g2);}
               <option>Under Gol FT</option>
               <option>Lay Zebra</option>
               <option>Cantos Limite</option>
+              <option>Race Cantos</option>
               <option>Under Canto Limite</option>
               <option>Handicap</option>
               <option>Zoião</option>
@@ -804,6 +816,7 @@ const URL_PLANILHA = "https://script.google.com/macros/s/AKfycbyhgQ4-CciEN7NG9Tb
 let entradas = [];
 let valoresOcultos = false;
 let filtroAtual = 'todas';
+let filtroStatusAtual = 'todos';
 let indiceEditando = null;
 
 /* ============================================================
@@ -926,13 +939,23 @@ document.querySelectorAll('nav.bottom-nav a, nav.desktop-nav a').forEach(link=>{
 });
 
 /* ============================================================
-   FILTROS DE LISTA
+   FILTROS DE LISTA (escopados só na lista de entradas — não mexem
+   nos botões de outros cards, como o de Rankings)
    ============================================================ */
-document.querySelectorAll('.filtro-btn').forEach(btn=>{
+document.querySelectorAll('#filtrosGrupoEntradas .filtro-btn').forEach(btn=>{
   btn.addEventListener('click', ()=>{
-    document.querySelectorAll('.filtro-btn').forEach(b=>b.classList.remove('active'));
+    document.querySelectorAll('#filtrosGrupoEntradas .filtro-btn').forEach(b=>b.classList.remove('active'));
     btn.classList.add('active');
     filtroAtual = btn.dataset.filtro;
+    atualizarTabela();
+  });
+});
+
+document.querySelectorAll('#filtrosStatusEntradas .filtro-btn').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    document.querySelectorAll('#filtrosStatusEntradas .filtro-btn').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    filtroStatusAtual = btn.dataset.status;
     atualizarTabela();
   });
 });
@@ -1080,7 +1103,7 @@ async function carregarEntradasDaPlanilha(){
       resultado: e.Resultado,
       lucro: Number(e.Lucro),
       obs: e.Observações
-    })).sort((a,b) => new Date(b.data) - new Date(a.data));
+    })).reverse(); // a planilha guarda na ordem de cadastro (mais antiga primeiro); invertemos pra mostrar o mais recente cadastrado no topo
 
     atualizarTudo();
   } catch(erro){
@@ -1178,9 +1201,26 @@ document.getElementById('formEntrada').addEventListener('submit', async function
 /* ============================================================
    HELPERS
    ============================================================ */
+// Retorna um objeto Date com os componentes de data/hora exatos no fuso de Brasília,
+// não importa o fuso configurado no navegador/dispositivo do usuário.
+function agoraBrasilia(){
+  const agora = new Date();
+  const formatter = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/Sao_Paulo',
+    year:'numeric', month:'2-digit', day:'2-digit',
+    hour:'2-digit', minute:'2-digit', second:'2-digit', hour12:false
+  });
+  const partes = formatter.formatToParts(agora).reduce((acc,p)=>{ acc[p.type] = p.value; return acc; }, {});
+  // hour pode vir "24" em alguns navegadores à meia-noite; normaliza pra "00"
+  const hora = partes.hour === '24' ? '00' : partes.hour;
+  return new Date(`${partes.year}-${partes.month}-${partes.day}T${hora}:${partes.minute}:${partes.second}`);
+}
 function hojeISO(){
-  const d = new Date();
-  return d.toISOString().substring(0,10);
+  const b = agoraBrasilia();
+  const ano = b.getFullYear();
+  const mes = String(b.getMonth() + 1).padStart(2, '0');
+  const dia = String(b.getDate()).padStart(2, '0');
+  return `${ano}-${mes}-${dia}`;
 }
 function formatarMoeda(valor){
   return (valor || 0).toLocaleString('pt-BR', { style:'currency', currency:'BRL' });
@@ -1210,7 +1250,7 @@ function ehMesmoDia(data, d, m, a){
    ATUALIZAÇÃO — META DO DIA
    ============================================================ */
 function atualizarMetaHoje(){
-  const hoje = new Date();
+  const hoje = agoraBrasilia();
   const entradasHoje = entradas.filter(e => e.data && ehMesmoDia(dataDaEntrada(e), hoje.getDate(), hoje.getMonth(), hoje.getFullYear()));
 
   const lucroG1 = entradasHoje.filter(e => grupoDoTipo(e.tipo) === 'g1').reduce((s,e)=> s + (Number(e.lucro)||0), 0);
@@ -1301,7 +1341,7 @@ const MESES = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Ag
 
 function atualizarCalendario(){
   calendario.innerHTML = '';
-  const hoje = new Date();
+  const hoje = agoraBrasilia();
   const ano = hoje.getFullYear();
   const mes = hoje.getMonth();
   document.getElementById('mesAtualLabel').textContent = `${MESES[mes]} ${ano}`;
@@ -1371,7 +1411,8 @@ function atualizarTabela(){
 
   const filtradas = entradas
     .map((e, idxOriginal) => ({...e, idxOriginal}))
-    .filter(e => filtroAtual === 'todas' || grupoDoTipo(e.tipo) === filtroAtual);
+    .filter(e => filtroAtual === 'todas' || grupoDoTipo(e.tipo) === filtroAtual)
+    .filter(e => filtroStatusAtual === 'todos' || (e.resultado || 'Pendente') === filtroStatusAtual);
 
   document.getElementById('emptyState').style.display = filtradas.length === 0 ? 'block' : 'none';
 
