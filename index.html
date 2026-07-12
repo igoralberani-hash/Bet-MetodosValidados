@@ -601,7 +601,8 @@ nav.bottom-nav a.active{color:var(--g2);}
       <button class="filtro-btn" data-status="Pendente">Pendente</button>
       <button class="filtro-btn" data-status="Green">Green</button>
       <button class="filtro-btn" data-status="Red">Red</button>
-      <button class="filtro-btn" data-status="Cashout">Cashout</button>
+      <button class="filtro-btn" data-status="Cashout Green">Cashout Green</button>
+      <button class="filtro-btn" data-status="Cashout Red">Cashout Red</button>
       <button class="filtro-btn" data-status="Anulada">Anulada</button>
     </div>
     <div class="table-wrapper">
@@ -733,7 +734,8 @@ nav.bottom-nav a.active{color:var(--g2);}
             <option>Pendente</option>
             <option>Green</option>
             <option>Red</option>
-            <option>Cashout</option>
+            <option>Cashout Green</option>
+            <option>Cashout Red</option>
             <option>Anulada</option>
           </select>
         </label>
@@ -741,13 +743,16 @@ nav.bottom-nav a.active{color:var(--g2);}
           <input type="number" step="0.01" name="lucro" placeholder="calculado ou manual">
         </label>
       </div>
+      <p style="font-size:.7rem; color:var(--text-dim); margin:-10px 0 14px;">
+        Casa = Betfair e Resultado = Green: o lucro calculado já sai descontando 4% de comissão automaticamente. Bet365 e Cashout não têm esse desconto.
+      </p>
 
       <details class="avancado">
         <summary>Mais opções (casa, campeonato, tempo, observações) <span>▾</span></summary>
 
         <div class="linha-2">
           <label>Casa
-            <select name="casa">
+            <select name="casa" id="casaSelect">
               <option>Betfair</option>
               <option>Bet365</option>
             </select>
@@ -795,6 +800,9 @@ const STAKE_G1 = 400;   const PCT_G1 = 0.25;  const META_G1 = STAKE_G1 * PCT_G1;
 const STAKE_G2 = 100;   const PCT_G2 = 0.60;  const META_G2 = STAKE_G2 * PCT_G2;   // R$60
 const META_DIA_TOTAL = META_G1 + META_G2;    // R$160
 
+const COMISSAO_BETFAIR = 0.04;               // 4% sobre o lucro líquido, só em Green e só na Betfair
+const TAXA_LIQUIDA_BETFAIR = 1 - COMISSAO_BETFAIR; // 0.96
+
 const TIPOS_G1 = new Set(['Vovô', '2 Gols à Frente', 'Lay Goleada', 'Lay HT']);
 const TIPOS_G2 = new Set(['Match Odds - Back', 'Match Odds - Lay', 'Gols - Over HT', 'Gols - Over FT']);
 
@@ -829,6 +837,7 @@ const modoLayInput = document.getElementById('modoLay');
 const operacaoInput = document.getElementById('operacao');
 const oddInput = document.getElementById('odd');
 const stakeInput = document.getElementById('stake');
+const casaInput = document.getElementById('casaSelect');
 const boxLay = document.getElementById('boxLay');
 const resultadoInput = document.querySelector('select[name="resultado"]');
 const lucroInput = document.querySelector('input[name="lucro"]');
@@ -998,6 +1007,7 @@ function calcularLucroAutomatico(){
   const odd = Number(oddInput.value);
   const stake = Number(stakeInput.value);
   const resultado = resultadoInput.value;
+  const casa = casaInput.value;
 
   if (!odd || !stake || resultado === 'Pendente' || resultado === 'Anulada'){
     lucroInput.value = '';
@@ -1023,7 +1033,12 @@ function calcularLucroAutomatico(){
     }
   }
 
-  if (resultado === 'Cashout') return;
+  // Comissão da Betfair: 4% sobre o lucro líquido, só quando ganha (Green) e só na Betfair — Bet365 não cobra comissão
+  if (resultado === 'Green' && casa === 'Betfair' && lucro > 0){
+    lucro = lucro * TAXA_LIQUIDA_BETFAIR;
+  }
+
+  if (resultado === 'Cashout Green' || resultado === 'Cashout Red') return;
 
   lucroInput.value = lucro.toFixed(2);
 }
@@ -1037,6 +1052,7 @@ function calcularResponsabilidadeLay(){
   const modoLay = modoLayInput.value;
   const odd = Number(oddInput.value);
   const stake = Number(stakeInput.value);
+  const casa = casaInput.value;
 
   if (operacao === 'Lay' && odd > 1 && stake > 0){
     let responsabilidade, lucroLay;
@@ -1047,9 +1063,13 @@ function calcularResponsabilidadeLay(){
       lucroLay = stake;
       responsabilidade = stake * (odd - 1);
     }
+
+    const comissaoAtiva = casa === 'Betfair';
+    if (comissaoAtiva) lucroLay = lucroLay * TAXA_LIQUIDA_BETFAIR;
+
     boxLay.style.display = 'block';
     boxLay.innerHTML = `Lay · ${modoLay === 'responsabilidade' ? 'Responsabilidade fixa' : 'Stake Betfair'}<br>
-      GREEN: ${formatarMoeda(lucroLay)} · RED: ${formatarMoeda(responsabilidade)}`;
+      GREEN: ${formatarMoeda(lucroLay)}${comissaoAtiva ? ' <span style="opacity:.7">(já com -4% de comissão Betfair)</span>' : ''} · RED: ${formatarMoeda(responsabilidade)}`;
   } else {
     boxLay.style.display = 'none';
     boxLay.innerHTML = '';
@@ -1062,6 +1082,9 @@ function operacaoSugeridaPorTipo(tipo){
   return null; // tipos ambíguos (Vovô, 2 Gols à Frente, Over HT/FT, Handicap, etc.) não mexem na Operação sozinhos
 }
 
+// Esses mercados só existem/são operados na Bet365 no seu fluxo — trava a Casa automaticamente
+const TIPOS_SOMENTE_BET365 = new Set(['Cantos Limite', 'Race Cantos', 'Under Canto Limite', 'Zoião']);
+
 tipoInput.addEventListener('change', ()=>{
   const g = grupoDoTipo(tipoInput.value);
   if (g === 'g1') stakeInput.value = STAKE_G1;
@@ -1070,12 +1093,15 @@ tipoInput.addEventListener('change', ()=>{
   const sugestao = operacaoSugeridaPorTipo(tipoInput.value);
   if (sugestao) operacaoInput.value = sugestao;
 
+  if (TIPOS_SOMENTE_BET365.has(tipoInput.value)) casaInput.value = 'Bet365';
+
   atualizarVisibilidadeModoLay();
   calcularResponsabilidadeLay();
   calcularLucroAutomatico();
 });
 modoLayInput.addEventListener('change', ()=>{ calcularResponsabilidadeLay(); calcularLucroAutomatico(); });
 operacaoInput.addEventListener('change', ()=>{ atualizarVisibilidadeModoLay(); calcularResponsabilidadeLay(); calcularLucroAutomatico(); });
+casaInput.addEventListener('change', ()=>{ calcularResponsabilidadeLay(); calcularLucroAutomatico(); });
 oddInput.addEventListener('input', ()=>{ calcularResponsabilidadeLay(); calcularLucroAutomatico(); });
 stakeInput.addEventListener('input', ()=>{ calcularResponsabilidadeLay(); calcularLucroAutomatico(); });
 resultadoInput.addEventListener('change', calcularLucroAutomatico);
@@ -1164,8 +1190,8 @@ document.getElementById('formEntrada').addEventListener('submit', async function
 
   let lucroDigitado = form.get('lucro') === '' ? 0 : Number(form.get('lucro'));
   const resultadoSelecionado = form.get('resultado');
-  if (resultadoSelecionado === 'Red') lucroDigitado = -Math.abs(lucroDigitado);
-  if (resultadoSelecionado === 'Green') lucroDigitado = Math.abs(lucroDigitado);
+  if (resultadoSelecionado === 'Red' || resultadoSelecionado === 'Cashout Red') lucroDigitado = -Math.abs(lucroDigitado);
+  if (resultadoSelecionado === 'Green' || resultadoSelecionado === 'Cashout Green') lucroDigitado = Math.abs(lucroDigitado);
 
   const novaEntrada = {
     data: form.get('data'),
