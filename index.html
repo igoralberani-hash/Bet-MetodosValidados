@@ -652,6 +652,8 @@ nav.bottom-nav a.active{color:var(--g2);}
         <button type="button" class="chip g1" data-tipo="Lay HT" data-stake="400" data-operacao="Lay">Lay HT</button>
         <button type="button" class="chip g2" data-tipo="Match Odds - Back" data-stake="100" data-operacao="Back">Match Odds Back</button>
         <button type="button" class="chip g2" data-tipo="Match Odds - Lay" data-stake="100" data-operacao="Lay">Match Odds Lay</button>
+        <button type="button" class="chip g2" data-tipo="Match Odds - Back HT" data-stake="100" data-operacao="Back">Match Odds Back HT</button>
+        <button type="button" class="chip g2" data-tipo="Match Odds - Lay HT" data-stake="100" data-operacao="Lay">Match Odds Lay HT</button>
         <button type="button" class="chip g2" data-tipo="Gols - Over HT" data-stake="100" data-operacao="Back">Over HT</button>
         <button type="button" class="chip g2" data-tipo="Gols - Over FT" data-stake="100" data-operacao="Back">Over FT</button>
       </div>
@@ -676,11 +678,12 @@ nav.bottom-nav a.active{color:var(--g2);}
             <optgroup label="Ritmo · meta 60%/dia (stake R$100)">
               <option>Match Odds - Back</option>
               <option>Match Odds - Lay</option>
+              <option>Match Odds - Back HT</option>
+              <option>Match Odds - Lay HT</option>
               <option>Gols - Over HT</option>
               <option>Gols - Over FT</option>
             </optgroup>
             <optgroup label="Outros modelos">
-              <option>Back HT</option>
               <option>Back FT</option>
               <option>Lay</option>
               <option>Under Gol HT</option>
@@ -804,7 +807,7 @@ const COMISSAO_BETFAIR = 0.04;               // 4% sobre o lucro líquido, só e
 const TAXA_LIQUIDA_BETFAIR = 1 - COMISSAO_BETFAIR; // 0.96
 
 const TIPOS_G1 = new Set(['Vovô', '2 Gols à Frente', 'Lay Goleada', 'Lay HT']);
-const TIPOS_G2 = new Set(['Match Odds - Back', 'Match Odds - Lay', 'Gols - Over HT', 'Gols - Over FT']);
+const TIPOS_G2 = new Set(['Match Odds - Back', 'Match Odds - Lay', 'Match Odds - Back HT', 'Match Odds - Lay HT', 'Gols - Over HT', 'Gols - Over FT']);
 
 function grupoDoTipo(tipo){
   if (TIPOS_G1.has(tipo)) return 'g1';
@@ -818,6 +821,10 @@ function infoGrupo(key){
     outros: {label:'Outros', cls:'outros'}
   }[key];
 }
+// Pra fins de taxa de acerto, Cashout Green conta como acerto e Cashout Red conta como erro,
+// igual Green/Red normais.
+function ehAcerto(resultado){ return resultado === 'Green' || resultado === 'Cashout Green'; }
+function ehErro(resultado){ return resultado === 'Red' || resultado === 'Cashout Red'; }
 
 const URL_PLANILHA = "https://script.google.com/macros/s/AKfycbyhgQ4-CciEN7NG9TbKZo9e8V69ENfcVriYrKV3wrklfAPhZYaK4tPTbkqnRhvv-1J-/exec";
 
@@ -1078,7 +1085,7 @@ function calcularResponsabilidadeLay(){
 
 function operacaoSugeridaPorTipo(tipo){
   if (/lay/i.test(tipo)) return 'Lay';
-  if (tipo === 'Match Odds - Back') return 'Back';
+  if (/^Match Odds - Back/.test(tipo)) return 'Back';
   return null; // tipos ambíguos (Vovô, 2 Gols à Frente, Over HT/FT, Handicap, etc.) não mexem na Operação sozinhos
 }
 
@@ -1104,7 +1111,18 @@ operacaoInput.addEventListener('change', ()=>{ atualizarVisibilidadeModoLay(); c
 casaInput.addEventListener('change', ()=>{ calcularResponsabilidadeLay(); calcularLucroAutomatico(); });
 oddInput.addEventListener('input', ()=>{ calcularResponsabilidadeLay(); calcularLucroAutomatico(); });
 stakeInput.addEventListener('input', ()=>{ calcularResponsabilidadeLay(); calcularLucroAutomatico(); });
-resultadoInput.addEventListener('change', calcularLucroAutomatico);
+function aplicarSinalCashout(){
+  const resultado = resultadoInput.value;
+  if (lucroInput.value === '') return;
+  if (resultado === 'Cashout Red'){
+    lucroInput.value = (-Math.abs(Number(lucroInput.value))).toFixed(2);
+  } else if (resultado === 'Cashout Green'){
+    lucroInput.value = Math.abs(Number(lucroInput.value)).toFixed(2);
+  }
+}
+
+resultadoInput.addEventListener('change', ()=>{ calcularLucroAutomatico(); aplicarSinalCashout(); });
+lucroInput.addEventListener('blur', aplicarSinalCashout);
 
 /* ============================================================
    PERSISTÊNCIA (Google Sheets via Apps Script) — inalterado
@@ -1316,8 +1334,8 @@ function atualizarDashboard(){
   const lucroTotal = entradas.reduce((total, e) => total + (Number(e.lucro)||0), 0);
   const bancaAtual = BANCA_INICIAL + lucroTotal;
 
-  const greens = entradas.filter(e => e.resultado === 'Green').length;
-  const reds = entradas.filter(e => e.resultado === 'Red').length;
+  const greens = entradas.filter(e => ehAcerto(e.resultado)).length;
+  const reds = entradas.filter(e => ehErro(e.resultado)).length;
   const decididas = greens + reds;
   const taxa = decididas > 0 ? ((greens / decididas) * 100).toFixed(1) : 0;
 
@@ -1481,8 +1499,8 @@ function construirRanking(campo){
     if (!grupos[chave]) grupos[chave] = { nome: chave, lucro:0, contagem:0, greens:0, reds:0 };
     grupos[chave].lucro += Number(e.lucro) || 0;
     grupos[chave].contagem += 1;
-    if (e.resultado === 'Green') grupos[chave].greens += 1;
-    if (e.resultado === 'Red') grupos[chave].reds += 1;
+    if (ehAcerto(e.resultado)) grupos[chave].greens += 1;
+    if (ehErro(e.resultado)) grupos[chave].reds += 1;
   });
   return Object.values(grupos);
 }
