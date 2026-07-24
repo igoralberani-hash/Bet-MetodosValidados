@@ -117,6 +117,30 @@ nav.desktop-nav a:hover{color:var(--text); border-color:var(--g2);}
 /* ============================================================
    TERMÔMETRO DE META DO DIA (elemento assinatura)
    ============================================================ */
+/* ============================================================
+   BANNER DE CONQUISTA (meta batida)
+   ============================================================ */
+.banner-conquista{
+  display:flex; align-items:center; gap:14px; padding:16px 18px;
+  background:linear-gradient(135deg, rgba(232,184,75,.14), rgba(52,211,153,.10));
+  border:1px solid rgba(232,184,75,.4);
+}
+.banner-conquista-icone{
+  width:44px; height:44px; border-radius:50%; flex-shrink:0;
+  background:rgba(232,184,75,.18); color:var(--g2);
+  display:flex; align-items:center; justify-content:center;
+}
+.banner-conquista-texto{flex:1; min-width:0;}
+.banner-conquista-titulo{font-family:var(--font-display); font-weight:700; font-size:.95rem; color:var(--text);}
+.banner-conquista-sub{font-size:.78rem; color:var(--text-muted); margin-top:2px;}
+.banner-conquista-proxima{text-align:right; flex-shrink:0;}
+.banner-conquista-proxima .rotulo{display:block; font-size:.66rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:.05em;}
+.banner-conquista-proxima .valor{display:block; font-family:var(--font-display); font-weight:700; color:var(--pos); font-size:1rem;}
+@media (max-width:560px){
+  .banner-conquista{flex-wrap:wrap;}
+  .banner-conquista-proxima{text-align:left; width:100%; padding-left:58px;}
+}
+
 .meta-hoje{padding:20px 18px;}
 .meta-hoje-topo{display:flex; align-items:baseline; justify-content:space-between; margin-bottom:14px; flex-wrap:wrap; gap:6px;}
 .meta-hoje-topo .titulo{font-size:.78rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:.06em;}
@@ -444,6 +468,21 @@ nav.bottom-nav a.active{color:var(--g2);}
 
 <div class="container">
 
+  <!-- ============ CONQUISTA: PRIMEIRA META BATIDA ============ -->
+  <div class="card banner-conquista" id="bannerConquista" style="display:none;">
+    <div class="banner-conquista-icone">
+      <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 21h8M12 17v4M7 4h10v4a5 5 0 0 1-10 0V4Z"/><path d="M7 5H4a1 1 0 0 0-1 1c0 3 2 5 4.5 5.3M17 5h3a1 1 0 0 1 1 1c0 3-2 5-4.5 5.3"/></svg>
+    </div>
+    <div class="banner-conquista-texto">
+      <div class="banner-conquista-titulo">Primeira meta batida — R$ 3.000,00 alcançados</div>
+      <div class="banner-conquista-sub" id="bannerConquistaSub">Calculando o tempo que levou...</div>
+    </div>
+    <div class="banner-conquista-proxima">
+      <span class="rotulo">Próxima meta</span>
+      <span class="valor">R$ 5.000,00</span>
+    </div>
+  </div>
+
   <!-- ============ META DO DIA (elemento principal) ============ -->
   <div class="card meta-hoje" id="dashboard">
     <div class="meta-hoje-topo">
@@ -452,7 +491,7 @@ nav.bottom-nav a.active{color:var(--g2);}
     </div>
     <div class="meta-hoje-numero">
       <span class="valor" id="valorHojeHeader">R$ 0,00</span>
-      <span class="meta-de">de R$ 160,00 (meta combinada)</span>
+      <span class="meta-de">de R$ 240,00 (meta combinada)</span>
     </div>
     <div class="barra-total">
       <div class="preenchimento" id="barraMetaTotal" style="width:0%"></div>
@@ -480,10 +519,10 @@ nav.bottom-nav a.active{color:var(--g2);}
     </div>
     <div class="linha-topo">
       <span>Início: <strong>R$ 1.000,00</strong></span>
-      <span>Meta: <strong>R$ 3.000,00</strong></span>
+      <span>Meta: <strong>R$ 5.000,00</strong></span>
     </div>
     <div class="trilho"><div class="fill" id="trilhoFill" style="width:0%"></div></div>
-    <div class="marcos"><span>R$ 1.000</span><span>R$ 3.000</span></div>
+    <div class="marcos"><span>R$ 1.000</span><span>R$ 5.000</span></div>
   </div>
 
   <!-- ============ STATS GERAIS ============ -->
@@ -548,15 +587,15 @@ nav.bottom-nav a.active{color:var(--g2);}
       </div>
       <div class="charts-grid-3">
         <div>
-          <div class="subtitulo-grafico g1">Núcleo · meta R$100/dia</div>
+          <div class="subtitulo-grafico g1">Núcleo · meta R$150/dia</div>
           <div class="grafico-box pequeno scroll-x"><div class="grafico-scroll-inner" id="innerMetaG1"><canvas id="graficoMetaG1"></canvas></div></div>
         </div>
         <div>
-          <div class="subtitulo-grafico g2">Ritmo · meta R$60/dia</div>
+          <div class="subtitulo-grafico g2">Ritmo · meta R$90/dia</div>
           <div class="grafico-box pequeno scroll-x"><div class="grafico-scroll-inner" id="innerMetaG2"><canvas id="graficoMetaG2"></canvas></div></div>
         </div>
         <div>
-          <div class="subtitulo-grafico geral">Geral · meta R$160/dia</div>
+          <div class="subtitulo-grafico geral">Geral · meta R$240/dia</div>
           <div class="grafico-box pequeno scroll-x"><div class="grafico-scroll-inner" id="innerMetaGeral"><canvas id="graficoMetaGeral"></canvas></div></div>
         </div>
       </div>
@@ -646,16 +685,16 @@ nav.bottom-nav a.active{color:var(--g2);}
     <form id="formEntrada">
 
       <div class="chips" id="chipsAtalho">
-        <button type="button" class="chip g1" data-tipo="Vovô" data-stake="400">Vovô</button>
-        <button type="button" class="chip g1" data-tipo="2 Gols à Frente" data-stake="400">2 Gols à Frente</button>
-        <button type="button" class="chip g1" data-tipo="Lay Goleada" data-stake="400" data-operacao="Lay">Lay Goleada</button>
-        <button type="button" class="chip g1" data-tipo="Lay HT" data-stake="400" data-operacao="Lay">Lay HT</button>
-        <button type="button" class="chip g2" data-tipo="Match Odds - Back" data-stake="100" data-operacao="Back">Match Odds Back</button>
-        <button type="button" class="chip g2" data-tipo="Match Odds - Lay" data-stake="100" data-operacao="Lay">Match Odds Lay</button>
-        <button type="button" class="chip g2" data-tipo="Match Odds - Back HT" data-stake="100" data-operacao="Back">Match Odds Back HT</button>
-        <button type="button" class="chip g2" data-tipo="Match Odds - Lay HT" data-stake="100" data-operacao="Lay">Match Odds Lay HT</button>
-        <button type="button" class="chip g2" data-tipo="Gols - Over HT" data-stake="100" data-operacao="Back">Over HT</button>
-        <button type="button" class="chip g2" data-tipo="Gols - Over FT" data-stake="100" data-operacao="Back">Over FT</button>
+        <button type="button" class="chip g1" data-tipo="Vovô" data-stake="600">Vovô</button>
+        <button type="button" class="chip g1" data-tipo="2 Gols à Frente" data-stake="600">2 Gols à Frente</button>
+        <button type="button" class="chip g1" data-tipo="Lay Goleada" data-stake="600" data-operacao="Lay">Lay Goleada</button>
+        <button type="button" class="chip g1" data-tipo="Lay HT" data-stake="600" data-operacao="Lay">Lay HT</button>
+        <button type="button" class="chip g2" data-tipo="Match Odds - Back" data-stake="150" data-operacao="Back">Match Odds Back</button>
+        <button type="button" class="chip g2" data-tipo="Match Odds - Lay" data-stake="150" data-operacao="Lay">Match Odds Lay</button>
+        <button type="button" class="chip g2" data-tipo="Match Odds - Back HT" data-stake="150" data-operacao="Back">Match Odds Back HT</button>
+        <button type="button" class="chip g2" data-tipo="Match Odds - Lay HT" data-stake="150" data-operacao="Lay">Match Odds Lay HT</button>
+        <button type="button" class="chip g2" data-tipo="Gols - Over HT" data-stake="150" data-operacao="Back">Over HT</button>
+        <button type="button" class="chip g2" data-tipo="Gols - Over FT" data-stake="150" data-operacao="Back">Over FT</button>
       </div>
 
       <label>Data
@@ -669,13 +708,13 @@ nav.bottom-nav a.active{color:var(--g2);}
       <div class="linha-2">
         <label>Tipo de entrada
           <select name="tipo" id="tipo">
-            <optgroup label="Núcleo · meta 25%/dia (stake R$400)">
+            <optgroup label="Núcleo · meta 25%/dia (stake R$600)">
               <option>Vovô</option>
               <option>2 Gols à Frente</option>
               <option>Lay Goleada</option>
               <option>Lay HT</option>
             </optgroup>
-            <optgroup label="Ritmo · meta 60%/dia (stake R$100)">
+            <optgroup label="Ritmo · meta 60%/dia (stake R$150)">
               <option>Match Odds - Back</option>
               <option>Match Odds - Lay</option>
               <option>Match Odds - Back HT</option>
@@ -712,7 +751,7 @@ nav.bottom-nav a.active{color:var(--g2);}
           <input type="number" step="0.01" name="odd" id="odd" required>
         </label>
         <label>Stake (R$)
-          <input type="number" name="stake" id="stake" value="400" required>
+          <input type="number" name="stake" id="stake" value="600" required>
         </label>
       </div>
 
@@ -797,10 +836,11 @@ nav.bottom-nav a.active{color:var(--g2);}
    CONFIGURAÇÃO GERAL
    ============================================================ */
 const BANCA_INICIAL = 1000;
-const META_BANCA = 3000;
+const META_BANCA = 5000;
+const PRIMEIRA_META = 3000; // marco histórico já conquistado — usado só pro banner de conquista
 
-const STAKE_G1 = 400;   const PCT_G1 = 0.25;  const META_G1 = STAKE_G1 * PCT_G1;   // R$100
-const STAKE_G2 = 100;   const PCT_G2 = 0.60;  const META_G2 = STAKE_G2 * PCT_G2;   // R$60
+const STAKE_G1 = 600;   const PCT_G1 = 0.25;  const META_G1 = STAKE_G1 * PCT_G1;   // R$150
+const STAKE_G2 = 150;   const PCT_G2 = 0.60;  const META_G2 = STAKE_G2 * PCT_G2;   // R$90
 const META_DIA_TOTAL = META_G1 + META_G2;    // R$160
 
 const COMISSAO_BETFAIR = 0.04;               // 4% sobre o lucro líquido, só em Green e só na Betfair
@@ -1349,7 +1389,7 @@ function atualizarDashboard(){
   document.getElementById('taxaAcerto').textContent = taxa + '%';
   document.getElementById('totalEntradas').textContent = entradas.length;
 
-  // progresso da banca 1000 -> 3000
+  // progresso da banca 1000 -> 5000
   const pctBanca = Math.max(0, Math.min(100, ((bancaAtual - BANCA_INICIAL) / (META_BANCA - BANCA_INICIAL)) * 100));
   document.getElementById('trilhoFill').style.width = pctBanca + '%';
   document.getElementById('progressoPct').textContent = pctBanca.toFixed(1) + '% da meta';
@@ -1366,6 +1406,48 @@ function atualizarDashboard(){
   document.getElementById('diasMetaBatida').textContent = diasBatidos;
 
   atualizarMetaHoje();
+  atualizarBannerConquista(bancaAtual);
+}
+
+/* Mostra e calcula o marco da primeira meta (R$3.000), com base no histórico real de entradas */
+function atualizarBannerConquista(bancaAtual){
+  const banner = document.getElementById('bannerConquista');
+  if (bancaAtual < PRIMEIRA_META){
+    banner.style.display = 'none';
+    return;
+  }
+
+  // monta o saldo dia a dia, em ordem cronológica, pra achar a primeira vez que a banca bateu a meta
+  const porDia = {};
+  entradas.forEach(e=>{
+    if (!e.data) return;
+    const d = dataDaEntrada(e);
+    const chave = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+    porDia[chave] = (porDia[chave] || 0) + (Number(e.lucro)||0);
+  });
+  const diasOrdenados = Object.keys(porDia).sort();
+
+  let saldo = BANCA_INICIAL;
+  let diaConquista = null;
+  let diasOperados = 0;
+  for (const dia of diasOrdenados){
+    saldo += porDia[dia];
+    diasOperados++;
+    if (saldo >= PRIMEIRA_META && !diaConquista){
+      diaConquista = dia;
+      break;
+    }
+  }
+
+  const sub = document.getElementById('bannerConquistaSub');
+  if (diaConquista){
+    const [ano, mes, dia] = diaConquista.split('-');
+    sub.textContent = `Alcançada em ${dia}/${mes}/${ano} — ${diasOperados} dia${diasOperados>1?'s':''} de operação até lá`;
+  } else {
+    sub.textContent = 'Marco alcançado';
+  }
+
+  banner.style.display = 'flex';
 }
 
 /* ============================================================
