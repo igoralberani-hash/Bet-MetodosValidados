@@ -1,105 +1,1151 @@
-// ============================================================
-// Apps Script — Backend da planilha de VALIDAÇÃO DE MÉTODOS
-// Mesma lógica/contrato do painel principal, pra funcionar com
-// o mesmo tipo de HTML.
-// ============================================================
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Validação de Métodos</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 
-const NOME_ABA = 'Entradas';
+<style>
+/* ============================================================
+   TOKENS — mesma família visual do painel principal, com um
+   acento diferente (ciano em vez de dourado) pra sinalizar que
+   isso é o "laboratório de testes", não o painel principal.
+   ============================================================ */
+:root{
+  --bg:#0A0D12;
+  --surface:#12161D;
+  --surface-2:#1A1F28;
+  --surface-3:#232935;
+  --border:#262D38;
+  --text:#EDEFF3;
+  --text-muted:#8A93A3;
+  --text-dim:#5C6472;
 
-function getSheet(){
-  return SpreadsheetApp.getActiveSpreadsheet().getSheetByName(NOME_ABA);
+  --acento:#3FC7C7;        /* ciano — cor de "em teste/laboratório" */
+  --acento-bg:rgba(63,199,199,.12);
+  --outros:#7A8394;
+
+  --pos:#34D399;
+  --pos-bg:rgba(52,211,153,.12);
+  --neg:#F0616B;
+  --neg-bg:rgba(240,97,107,.12);
+
+  --radius-lg:18px;
+  --radius-md:12px;
+  --radius-sm:8px;
+
+  --font-display:'Space Grotesk', sans-serif;
+  --font-body:'Inter', sans-serif;
 }
 
-// Lê todas as entradas e devolve como JSON
-function doGet(e){
-  const sheet = getSheet();
-  const dados = sheet.getDataRange().getValues();
-  const cabecalho = dados[0];
-  const linhas = dados.slice(1);
+*{box-sizing:border-box;}
+html{-webkit-tap-highlight-color:transparent;}
+body{
+  margin:0;
+  font-family:var(--font-body);
+  background:
+    radial-gradient(circle at 15% 0%, rgba(63,199,199,.08), transparent 40%),
+    radial-gradient(circle at 85% 15%, rgba(63,199,199,.05), transparent 40%),
+    var(--bg);
+  color:var(--text);
+  padding-bottom:88px;
+}
+h1,h2,h3{font-family:var(--font-display); margin:0;}
+::selection{background:var(--acento); color:#0A0D12;}
 
-  const resultado = linhas
-    .filter(linha => linha[0] !== '') // ignora linhas vazias
-    .map(linha => {
-      const obj = {};
-      cabecalho.forEach((coluna, i) => {
-        let valor = linha[i];
-        if (valor instanceof Date) {
-          valor = Utilities.formatDate(valor, Session.getScriptTimeZone(), 'yyyy-MM-dd');
-        }
-        obj[coluna] = valor;
-      });
-      return obj;
-    });
+/* ============================================================
+   TOPO
+   ============================================================ */
+header.topbar{
+  position:sticky; top:0; z-index:30;
+  display:flex; align-items:center; justify-content:space-between;
+  padding:14px 18px;
+  background:rgba(10,13,18,.85);
+  backdrop-filter:blur(10px);
+  border-bottom:1px solid var(--border);
+}
+header.topbar .brand{display:flex; align-items:center; gap:10px;}
+header.topbar .brand .dot{
+  width:10px;height:10px;border-radius:50%;
+  background:var(--acento);
+  box-shadow:0 0 10px rgba(63,199,199,.6);
+}
+header.topbar h1{font-size:1.05rem; font-weight:600; letter-spacing:.2px;}
+header.topbar .lucro-mini{text-align:right;}
+header.topbar .lucro-mini .label{font-size:.68rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:.06em;}
+header.topbar .lucro-mini .valor{font-family:var(--font-display); font-weight:700; font-size:1.05rem;}
 
-  return ContentService.createTextOutput(JSON.stringify(resultado))
-    .setMimeType(ContentService.MimeType.JSON);
+.icon-btn{
+  background:none; border:1px solid var(--border); color:var(--text-muted);
+  width:34px; height:34px; border-radius:50%;
+  display:flex; align-items:center; justify-content:center;
+  cursor:pointer; font-size:.95rem; padding:0;
+}
+.icon-btn:hover{border-color:var(--acento); color:var(--acento);}
+
+nav.desktop-nav{display:flex; gap:8px; padding:10px 18px; overflow-x:auto; border-bottom:1px solid var(--border);}
+nav.desktop-nav a{
+  color:var(--text-muted); text-decoration:none; font-size:.85rem; font-weight:600;
+  padding:8px 16px; border-radius:20px; border:1px solid var(--border); white-space:nowrap;
+}
+nav.desktop-nav a:hover{color:var(--text); border-color:var(--acento);}
+
+.container{max-width:960px; margin:0 auto; padding:16px;}
+
+/* ============================================================
+   CARDS
+   ============================================================ */
+.card{
+  background:linear-gradient(180deg, var(--surface-2), var(--surface));
+  border:1px solid var(--border);
+  border-radius:var(--radius-lg);
+  padding:18px;
+  margin-bottom:16px;
+}
+.card-head{display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; flex-wrap:wrap; gap:8px;}
+.card-head h2{font-size:.95rem; font-weight:600; color:var(--text);}
+.card-head .sub{font-size:.72rem; color:var(--text-muted);}
+
+.aviso-fase{
+  display:flex; align-items:center; gap:12px; padding:14px 16px;
+  background:var(--acento-bg); border:1px solid rgba(63,199,199,.35);
+}
+.aviso-fase svg{color:var(--acento); flex-shrink:0;}
+.aviso-fase p{margin:0; font-size:.82rem; color:var(--text-muted); line-height:1.5;}
+.aviso-fase strong{color:var(--text);}
+
+/* ============================================================
+   STATS
+   ============================================================ */
+.stats-grid{display:grid; grid-template-columns:repeat(auto-fit, minmax(140px,1fr)); gap:12px;}
+.stat-card{background:var(--surface-3); border:1px solid var(--border); border-radius:var(--radius-md); padding:14px;}
+.stat-card .rotulo{font-size:.68rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:.05em; margin-bottom:6px;}
+.stat-card .valor{font-family:var(--font-display); font-weight:700; font-size:1.25rem;}
+.positive{color:var(--pos);} .negative{color:var(--neg);}
+
+/* ============================================================
+   CALENDÁRIO
+   ============================================================ */
+#calendario{display:grid; grid-template-columns:repeat(7, 1fr); gap:6px; margin-top:4px;}
+.dia-semana{text-align:center; font-size:.68rem; font-weight:700; color:var(--text-dim); padding:6px 0; text-transform:uppercase;}
+.dia-vazio{background:transparent;}
+.dia{
+  background:var(--surface-3); border:1px solid var(--border); border-radius:var(--radius-sm);
+  padding:8px 4px; text-align:center; cursor:pointer; min-height:58px;
+  display:flex; flex-direction:column; justify-content:center; gap:2px;
+  transition:transform .15s ease;
+}
+.dia:active{transform:scale(.95);}
+.dia .num{font-size:.72rem; color:var(--text-muted); font-weight:600;}
+.dia .val{font-size:.68rem; font-family:var(--font-display); font-weight:700;}
+.dia.positivo{background:var(--pos-bg); border-color:rgba(52,211,153,.4);}
+.dia.positivo .val{color:var(--pos);}
+.dia.negativo{background:var(--neg-bg); border-color:rgba(240,97,107,.4);}
+.dia.negativo .val{color:var(--neg);}
+.dia.neutro .val{color:var(--text-dim);}
+.dia.hoje{border-color:var(--acento); box-shadow:0 0 0 1px var(--acento);}
+.legenda-cal{display:flex; flex-wrap:wrap; gap:12px; margin-top:12px; font-size:.68rem; color:var(--text-muted);}
+.legenda-cal span{display:inline-flex; align-items:center; gap:5px;}
+.legenda-cal i{width:9px; height:9px; border-radius:3px; display:inline-block;}
+
+/* ============================================================
+   GRÁFICOS
+   ============================================================ */
+.grafico-box{height:260px; position:relative;}
+.grafico-box canvas{max-height:260px !important;}
+.charts-grid{display:grid; grid-template-columns:1.3fr 1fr; gap:16px;}
+@media (max-width:768px){.charts-grid{grid-template-columns:1fr;}}
+
+/* ============================================================
+   FILTROS / BADGES / RANKINGS
+   ============================================================ */
+.filtros{display:flex; gap:8px; overflow-x:auto; margin-bottom:14px; padding-bottom:2px;}
+.filtro-btn{
+  background:var(--surface-3); border:1px solid var(--border); color:var(--text-muted);
+  padding:7px 14px; border-radius:20px; font-size:.75rem; font-weight:600; cursor:pointer; white-space:nowrap;
+}
+.filtro-btn.active{background:var(--acento); color:#0A0D12; border-color:var(--acento);}
+
+.ranking-colunas{display:grid; grid-template-columns:1fr 1fr; gap:18px;}
+@media (max-width:640px){.ranking-colunas{grid-template-columns:1fr;}}
+.ranking-titulo-coluna{font-size:.72rem; font-weight:700; text-transform:uppercase; letter-spacing:.05em; margin-bottom:10px;}
+.ranking-titulo-coluna.melhores{color:var(--pos);}
+.ranking-titulo-coluna.piores{color:var(--neg);}
+.ranking-linha{
+  display:flex; align-items:center; gap:10px; padding:10px; border-radius:var(--radius-sm);
+  background:var(--surface-3); border:1px solid var(--border); margin-bottom:8px; cursor:pointer;
+}
+.ranking-linha:hover{border-color:var(--acento);}
+.ranking-pos{
+  width:22px; height:22px; border-radius:50%; background:var(--surface-2); color:var(--text-muted);
+  display:flex; align-items:center; justify-content:center; font-size:.68rem; font-weight:700; flex-shrink:0;
+}
+.ranking-info{flex:1; min-width:0;}
+.ranking-nome{font-size:.82rem; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+.ranking-sub{font-size:.68rem; color:var(--text-muted); margin-top:2px;}
+.ranking-valor{font-family:var(--font-display); font-weight:700; font-size:.85rem; white-space:nowrap;}
+.ranking-freq-barra{height:5px; border-radius:10px; background:rgba(255,255,255,.06); margin-top:6px; overflow:hidden;}
+.ranking-freq-barra span{display:block; height:100%; border-radius:10px; background:var(--acento);}
+.ranking-vazio{text-align:center; color:var(--text-muted); padding:24px; font-size:.85rem;}
+
+/* ============================================================
+   TABELA / LISTA DE ENTRADAS
+   ============================================================ */
+.table-wrapper{overflow-x:auto;}
+table{width:100%; border-collapse:collapse; font-size:.82rem;}
+th,td{padding:10px 8px; text-align:left; border-bottom:1px solid var(--border); white-space:nowrap;}
+th{color:var(--text-muted); font-size:.68rem; text-transform:uppercase; letter-spacing:.05em; font-weight:600;}
+.acoes-btn{background:var(--surface-3); border:1px solid var(--border); color:var(--text-muted); padding:5px 10px; border-radius:8px; font-size:.72rem; cursor:pointer; margin-right:4px;}
+.acoes-btn:hover{border-color:var(--acento); color:var(--acento);}
+.acoes-btn.remover:hover{border-color:var(--neg); color:var(--neg);}
+.empty-state{text-align:center; padding:40px 20px; color:var(--text-muted);}
+.empty-state .svg-empty{display:flex; justify-content:center; margin-bottom:10px; color:var(--text-dim);}
+
+@media (max-width:768px){
+  table thead{display:none;}
+  table, table tbody, table tr, table td{display:block; width:100%;}
+  table tr{background:var(--surface-3); border:1px solid var(--border); border-radius:var(--radius-md); margin-bottom:10px; padding:10px 12px;}
+  table td{border:none; padding:5px 0; white-space:normal; display:flex; justify-content:space-between; gap:10px; align-items:center;}
+  table td::before{content:attr(data-label); color:var(--text-dim); font-size:.68rem; font-weight:600; text-transform:uppercase;}
+  table td.linha-acoes{justify-content:flex-start;}
+  table td.linha-acoes::before{display:none;}
 }
 
-// Recebe uma nova entrada, uma atualização ou uma remoção
-function doPost(e){
-  const sheet = getSheet();
-  const corpo = JSON.parse(e.postData.contents);
-  const cabecalho = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+/* ============================================================
+   FORM — NOVA ENTRADA
+   ============================================================ */
+.fab{
+  position:fixed; right:20px; bottom:92px; z-index:40;
+  width:58px; height:58px; border-radius:50%;
+  background:var(--acento); color:#0A0D12; border:none; font-size:1.6rem; font-weight:700;
+  display:flex; align-items:center; justify-content:center; cursor:pointer;
+  box-shadow:0 6px 20px rgba(63,199,199,.35);
+}
+@media (min-width:769px){.fab{bottom:24px;}}
 
-  if (corpo.acao === 'remover'){
-    removerLinha(sheet, cabecalho, corpo.id);
-  } else if (corpo.acao === 'atualizarTudo'){
-    atualizarLinha(sheet, cabecalho, corpo);
+.overlay{position:fixed; inset:0; background:rgba(5,7,10,.72); backdrop-filter:blur(3px); z-index:60; display:none; align-items:flex-end; justify-content:center;}
+@media (min-width:769px){.overlay{align-items:center;}}
+.overlay.open{display:flex;}
+.sheet{background:var(--surface); border:1px solid var(--border); border-radius:20px 20px 0 0; width:100%; max-width:560px; max-height:92vh; overflow-y:auto; padding:18px 18px calc(18px + env(safe-area-inset-bottom));}
+@media (min-width:769px){.sheet{border-radius:20px;}}
+.sheet-head{display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; position:sticky; top:0; background:var(--surface); padding-bottom:8px;}
+
+.chips{display:flex; flex-wrap:wrap; gap:8px; margin-bottom:16px;}
+.chip{border-radius:20px; padding:8px 14px; font-size:.75rem; font-weight:700; cursor:pointer; border:1px solid rgba(63,199,199,.35); background:var(--surface-3); color:var(--acento);}
+.chip.active{background:var(--acento); color:#0A0D12 !important;}
+
+form label{display:block; font-size:.78rem; font-weight:600; color:var(--text-muted); margin-bottom:14px;}
+input, select, textarea{
+  width:100%; padding:11px 12px; border-radius:var(--radius-sm); border:1px solid var(--border);
+  background:var(--surface-3); color:var(--text); margin-top:6px; font-size:.9rem; font-family:var(--font-body);
+}
+input:focus, select:focus, textarea:focus{outline:none; border-color:var(--acento); box-shadow:0 0 0 3px rgba(63,199,199,.15);}
+.linha-2{display:grid; grid-template-columns:1fr 1fr; gap:12px;}
+
+.box-lay{background:var(--acento-bg); border:1px solid rgba(63,199,199,.35); color:var(--acento); padding:10px 12px; border-radius:var(--radius-sm); margin-bottom:14px; font-size:.8rem; font-weight:600; display:none;}
+
+details.avancado{margin-bottom:14px; border:1px solid var(--border); border-radius:var(--radius-md); padding:0 14px;}
+details.avancado summary{cursor:pointer; padding:12px 0; font-size:.8rem; font-weight:700; color:var(--text-muted); list-style:none; display:flex; align-items:center; justify-content:space-between;}
+details.avancado summary::-webkit-details-marker{display:none;}
+details.avancado[open] summary{border-bottom:1px solid var(--border); margin-bottom:12px;}
+
+button.btn-primario{width:100%; padding:14px; border-radius:var(--radius-md); border:none; cursor:pointer; background:var(--acento); color:#0A0D12; font-weight:700; font-size:.95rem; font-family:var(--font-body);}
+
+.modal-content{padding:2px;}
+.entrada-item{background:var(--surface-3); border:1px solid var(--border); border-radius:var(--radius-sm); padding:12px; margin-bottom:8px; font-size:.82rem;}
+.entrada-item .linha1{display:flex; justify-content:space-between; margin-bottom:4px; font-weight:600;}
+
+#toast{
+  position:fixed; top:14px; left:50%; transform:translateX(-50%) translateY(-20px);
+  background:var(--surface-3); border:1px solid var(--border); color:var(--text);
+  padding:10px 18px; border-radius:20px; font-size:.82rem; font-weight:600;
+  z-index:100; opacity:0; transition:all .3s ease; pointer-events:none; box-shadow:0 8px 24px rgba(0,0,0,.4);
+}
+#toast.show{opacity:1; transform:translateX(-50%) translateY(0);}
+#toast.erro{border-color:rgba(240,97,107,.5); color:var(--neg);}
+#toast.sucesso{border-color:rgba(52,211,153,.5); color:var(--pos);}
+
+nav.bottom-nav{
+  display:none; position:fixed; bottom:0; left:0; right:0; z-index:35;
+  background:rgba(10,13,18,.92); backdrop-filter:blur(10px); border-top:1px solid var(--border);
+  padding:8px 10px calc(8px + env(safe-area-inset-bottom)); justify-content:space-around;
+}
+nav.bottom-nav a{color:var(--text-dim); text-decoration:none; font-size:.62rem; font-weight:600; display:flex; flex-direction:column; align-items:center; gap:3px; padding:4px 10px;}
+nav.bottom-nav a .ic{display:flex;}
+nav.bottom-nav a.active{color:var(--acento);}
+@media (max-width:768px){ nav.desktop-nav{display:none;} nav.bottom-nav{display:flex;} }
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand"><span class="dot"></span><h1>Validação de Métodos</h1></div>
+  <div style="display:flex; align-items:center; gap:10px;">
+    <div class="lucro-mini">
+      <div class="label">Lucro do período</div>
+      <div class="valor valor-financeiro" id="lucroTopo" data-valor="R$ 0,00">R$ 0,00</div>
+    </div>
+    <button class="icon-btn" id="btnOlho" onclick="alternarValores()" title="Ocultar valores">
+      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+    </button>
+  </div>
+</header>
+
+<nav class="desktop-nav">
+  <a href="#dashboard">Painel</a>
+  <a href="#calendario-card">Calendário</a>
+  <a href="#graficos">Gráficos</a>
+  <a href="#rankings">Rankings</a>
+  <a href="#entradas-lista">Entradas</a>
+</nav>
+
+<div class="container">
+
+  <div class="card aviso-fase" id="dashboard">
+    <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3h6M10 3v6.5L4.5 18a2 2 0 0 0 1.7 3h11.6a2 2 0 0 0 1.7-3L14 9.5V3"/><path d="M7.5 14h9"/></svg>
+    <p><strong>Fase de validação.</strong> Sem meta diária fixa por enquanto — o objetivo aqui é juntar amostra suficiente de cada método pra decidir quais valem a pena promover pro painel principal.</p>
+  </div>
+
+  <!-- ============ RESUMO ============ -->
+  <div class="card">
+    <div class="card-head"><h2>Resumo geral</h2></div>
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="rotulo">Lucro total</div>
+        <div class="valor valor-financeiro" id="lucroTotal" data-valor="R$ 0,00">R$ 0,00</div>
+      </div>
+      <div class="stat-card">
+        <div class="rotulo">Taxa de acerto</div>
+        <div class="valor" id="taxaAcerto">0%</div>
+      </div>
+      <div class="stat-card">
+        <div class="rotulo">Total de entradas</div>
+        <div class="valor" id="totalEntradas">0</div>
+      </div>
+      <div class="stat-card">
+        <div class="rotulo">Dias operados</div>
+        <div class="valor" id="diasOperados">0</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ CALENDÁRIO ============ -->
+  <div class="card" id="calendario-card">
+    <div class="card-head">
+      <h2>Calendário mensal</h2>
+      <span class="sub" id="mesAtualLabel"></span>
+    </div>
+    <div id="calendario"></div>
+    <div class="legenda-cal">
+      <span><i style="background:var(--pos)"></i> Dia positivo</span>
+      <span><i style="background:var(--neg)"></i> Dia negativo</span>
+      <span><i style="background:var(--outros)"></i> Sem operação</span>
+    </div>
+  </div>
+
+  <!-- ============ GRÁFICOS ============ -->
+  <div id="graficos">
+    <div class="charts-grid">
+      <div class="card">
+        <div class="card-head"><h2>Lucro acumulado</h2></div>
+        <div class="grafico-box"><canvas id="graficoAcumulado"></canvas></div>
+      </div>
+      <div class="card">
+        <div class="card-head"><h2>Lucro por método</h2></div>
+        <div class="grafico-box"><canvas id="graficoMetodo"></canvas></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ RANKINGS ============ -->
+  <div class="card" id="rankings">
+    <div class="card-head">
+      <h2>Rankings</h2>
+      <span class="sub">o que já dá sinal de funcionar</span>
+    </div>
+    <div class="filtros" id="filtrosRanking">
+      <button class="filtro-btn active" data-ranking="metodo-lucro">Método · Lucro</button>
+      <button class="filtro-btn" data-ranking="campeonato-lucro">Campeonato · Lucro</button>
+      <button class="filtro-btn" data-ranking="metodo-frequencia">Método · Frequência</button>
+    </div>
+    <div id="corpoRanking"></div>
+  </div>
+
+  <!-- ============ LISTA DE ENTRADAS ============ -->
+  <div class="card" id="entradas-lista">
+    <div class="card-head">
+      <h2>Entradas registradas</h2>
+      <span class="sub">mais recentes primeiro</span>
+    </div>
+    <div class="filtros" id="filtrosStatusEntradas">
+      <button class="filtro-btn active" data-status="todos">Todos os status</button>
+      <button class="filtro-btn" data-status="Pendente">Pendente</button>
+      <button class="filtro-btn" data-status="Green">Green</button>
+      <button class="filtro-btn" data-status="Red">Red</button>
+      <button class="filtro-btn" data-status="Cashout Green">Cashout Green</button>
+      <button class="filtro-btn" data-status="Cashout Red">Cashout Red</button>
+      <button class="filtro-btn" data-status="Anulada">Anulada</button>
+    </div>
+    <div class="table-wrapper">
+      <table>
+        <thead><tr><th>Data</th><th>Jogo</th><th>Método</th><th>Oper.</th><th>Odd</th><th>Stake</th><th>Resultado</th><th>Lucro</th><th>Ações</th></tr></thead>
+        <tbody id="tabelaEntradas"></tbody>
+      </table>
+      <div class="empty-state" id="emptyState" style="display:none;">
+        <div class="svg-empty"><svg viewBox="0 0 24 24" width="34" height="34" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg></div>
+        Nenhuma entrada ainda. Toque no botão <strong>+</strong> pra lançar a primeira.
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<button class="fab" onclick="abrirModalEntrada()" title="Nova entrada">+</button>
+
+<nav class="bottom-nav">
+  <a href="#dashboard" class="active"><span class="ic"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11.5 12 4l9 7.5"/><path d="M5 10v9a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1v-9"/></svg></span>Painel</a>
+  <a href="#calendario-card"><span class="ic"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M8 3v4M16 3v4M3 10h18"/></svg></span>Calendário</a>
+  <a href="#graficos"><span class="ic"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10M12 20V4M20 20v-7"/></svg></span>Gráficos</a>
+  <a href="#entradas-lista"><span class="ic"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg></span>Entradas</a>
+</nav>
+
+<!-- ============ MODAL: NOVA ENTRADA ============ -->
+<div class="overlay" id="overlayForm">
+  <div class="sheet">
+    <div class="sheet-head">
+      <h2 id="tituloForm">Nova entrada</h2>
+      <button class="icon-btn" onclick="fecharModalEntrada()">✕</button>
+    </div>
+    <form id="formEntrada">
+      <div class="chips" id="chipsAtalho">
+        <button type="button" class="chip" data-tipo="Over Gol HT - Valida">Over Gol HT - Valida</button>
+        <button type="button" class="chip" data-tipo="Over Gol FT - Valida">Over Gol FT - Valida</button>
+        <button type="button" class="chip" data-tipo="Back HT" data-operacao="Back">Back HT</button>
+        <button type="button" class="chip" data-tipo="Lay HT" data-operacao="Lay">Lay HT</button>
+        <button type="button" class="chip" data-tipo="Lay Goleada" data-operacao="Lay">Lay Goleada</button>
+        <button type="button" class="chip" data-tipo="Lay Placar" data-operacao="Lay">Lay Placar</button>
+        <button type="button" class="chip" data-tipo="Tick - %">Tick - %</button>
+        <button type="button" class="chip" data-tipo="Gol HT - Polvo">Gol HT - Polvo</button>
+        <button type="button" class="chip" data-tipo="Gol FT - Polvo">Gol FT - Polvo</button>
+        <button type="button" class="chip" data-tipo="Back HT - Polvo" data-operacao="Back">Back HT - Polvo</button>
+        <button type="button" class="chip" data-tipo="Back FT - Polvo" data-operacao="Back">Back FT - Polvo</button>
+      </div>
+
+      <label>Data<input type="date" name="data" required></label>
+      <label>Jogo<input type="text" name="jogo" placeholder="Ex: Brasil x Argentina" required></label>
+
+      <div class="linha-2">
+        <label>Método
+          <select name="tipo" id="tipo">
+            <option>Over Gol HT - Valida</option>
+            <option>Over Gol FT - Valida</option>
+            <option>Back HT</option>
+            <option>Lay HT</option>
+            <option>Lay Goleada</option>
+            <option>Lay Placar</option>
+            <option>Tick - %</option>
+            <option>Gol HT - Polvo</option>
+            <option>Gol FT - Polvo</option>
+            <option>Back HT - Polvo</option>
+            <option>Back FT - Polvo</option>
+          </select>
+        </label>
+        <label>Operação
+          <select name="operacao" id="operacao">
+            <option>Back</option>
+            <option>Lay</option>
+          </select>
+        </label>
+      </div>
+
+      <div class="linha-2">
+        <label>Odd<input type="number" step="0.01" name="odd" id="odd" required></label>
+        <label>Stake (R$)<input type="number" name="stake" id="stake" required></label>
+      </div>
+
+      <div id="containerModoLay" style="display:none; margin-bottom:14px;">
+        <label>Modo do Lay
+          <select name="modoLay" id="modoLay">
+            <option value="responsabilidade">Responsabilidade fixa (recomendado)</option>
+            <option value="stake">Stake Betfair</option>
+          </select>
+        </label>
+        <p style="font-size:.72rem; color:var(--text-muted); margin:-8px 0 0; line-height:1.5;">
+          <strong style="color:var(--text);">Responsabilidade fixa:</strong> o valor em "Stake" é o máximo que você perde se der Red.<br>
+          <strong style="color:var(--text);">Stake Betfair:</strong> o valor em "Stake" é o número exato que você digitaria na Betfair — a responsabilidade real é maior, calculada abaixo.
+        </p>
+      </div>
+
+      <div class="box-lay" id="boxLay"></div>
+
+      <div class="linha-2">
+        <label>Resultado
+          <select name="resultado">
+            <option>Pendente</option>
+            <option>Green</option>
+            <option>Red</option>
+            <option>Cashout Green</option>
+            <option>Cashout Red</option>
+            <option>Anulada</option>
+          </select>
+        </label>
+        <label>Lucro/Prejuízo real (R$)<input type="number" step="0.01" name="lucro" placeholder="calculado ou manual"></label>
+      </div>
+      <p style="font-size:.7rem; color:var(--text-dim); margin:-10px 0 14px;">
+        Casa = Betfair e Resultado = Green: o lucro já sai descontando 4% de comissão automaticamente. Bet365 e Cashout não têm esse desconto.
+      </p>
+
+      <details class="avancado">
+        <summary>Mais opções (casa, campeonato, tempo, observações) <span>▾</span></summary>
+        <div class="linha-2">
+          <label>Casa
+            <select name="casa" id="casaSelect">
+              <option>Betfair</option>
+              <option>Bet365</option>
+            </select>
+          </label>
+          <label>Campeonato<input type="text" name="campeonato" placeholder="Ex: Brasileirão Série A"></label>
+        </div>
+        <label>Tempo da entrada<input type="text" name="tempo" placeholder="Ex: 12 min, HT, Intervalo, 65 min"></label>
+        <label>Observações<textarea name="obs" rows="2"></textarea></label>
+      </details>
+
+      <button type="submit" class="btn-primario" id="btnSalvar">Salvar entrada</button>
+    </form>
+  </div>
+</div>
+
+<!-- ============ MODAL GENÉRICO ============ -->
+<div class="overlay" id="overlayModal">
+  <div class="sheet">
+    <div class="sheet-head">
+      <h2 id="modalTitulo">Detalhes</h2>
+      <button class="icon-btn" onclick="fecharModal()">✕</button>
+    </div>
+    <div class="modal-content" id="modalCorpo"></div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+/* ============================================================
+   CONFIGURAÇÃO GERAL
+   ============================================================ */
+const URL_PLANILHA = "https://script.google.com/macros/s/AKfycbxQ2K8Sbm9-v7_RdutMiDsu4OqoxcdnvxrmcsyIOyI2QmBPMwcqc6_KebuiZPUNBKhD/exec";
+
+const COMISSAO_BETFAIR = 0.04;
+const TAXA_LIQUIDA_BETFAIR = 1 - COMISSAO_BETFAIR;
+
+let entradas = [];
+let valoresOcultos = false;
+let filtroStatusAtual = 'todos';
+let indiceEditando = null;
+
+function operacaoSugeridaPorTipo(tipo){
+  if (/lay/i.test(tipo)) return 'Lay';
+  if (/^Back/.test(tipo)) return 'Back';
+  return null; // Over Gol - Valida, Gol - Polvo, Tick - % ficam livres pro usuário escolher
+}
+function infoGrupo(){ return { label:'Método', cls:'acento' }; } // mantido só por compatibilidade de padrão visual
+
+const tipoInput = document.getElementById('tipo');
+const operacaoInput = document.getElementById('operacao');
+const modoLayInput = document.getElementById('modoLay');
+const oddInput = document.getElementById('odd');
+const stakeInput = document.getElementById('stake');
+const casaInput = document.getElementById('casaSelect');
+const boxLay = document.getElementById('boxLay');
+const resultadoInput = document.querySelector('select[name="resultado"]');
+const lucroInput = document.querySelector('input[name="lucro"]');
+const tabelaEntradas = document.getElementById('tabelaEntradas');
+
+function toast(msg, tipo=''){
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = tipo ? `show ${tipo}` : 'show';
+  clearTimeout(el._t);
+  el._t = setTimeout(()=> el.classList.remove('show'), 2600);
+}
+
+/* ============================================================
+   MODAIS
+   ============================================================ */
+function abrirModalEntrada(){ document.getElementById('overlayForm').classList.add('open'); }
+function fecharModalEntrada(){ document.getElementById('overlayForm').classList.remove('open'); resetarFormulario(); }
+function resetarFormulario(){
+  const form = document.getElementById('formEntrada');
+  form.reset();
+  form.data.value = hojeISO();
+  boxLay.style.display = 'none';
+  atualizarVisibilidadeModoLay();
+  indiceEditando = null;
+  document.getElementById('tituloForm').textContent = 'Nova entrada';
+  document.getElementById('btnSalvar').textContent = 'Salvar entrada';
+  document.querySelectorAll('#chipsAtalho .chip').forEach(c => c.classList.remove('active'));
+}
+function abrirModal(titulo, htmlCorpo){
+  document.getElementById('modalTitulo').textContent = titulo;
+  document.getElementById('modalCorpo').innerHTML = htmlCorpo;
+  document.getElementById('overlayModal').classList.add('open');
+}
+function fecharModal(){ document.getElementById('overlayModal').classList.remove('open'); }
+document.querySelectorAll('.overlay').forEach(ov=>{
+  ov.addEventListener('click', e => { if (e.target === ov) ov.classList.remove('open'); });
+});
+
+/* ============================================================
+   CHIPS DE ATALHO
+   ============================================================ */
+document.querySelectorAll('#chipsAtalho .chip').forEach(chip=>{
+  chip.addEventListener('click', ()=>{
+    document.querySelectorAll('#chipsAtalho .chip').forEach(c=>c.classList.remove('active'));
+    chip.classList.add('active');
+    tipoInput.value = chip.dataset.tipo;
+    if (chip.dataset.operacao) operacaoInput.value = chip.dataset.operacao;
+    atualizarVisibilidadeModoLay();
+    calcularResponsabilidadeLay();
+    calcularLucroAutomatico();
+    document.querySelector('input[name="jogo"]').focus();
+  });
+});
+
+document.querySelectorAll('nav.bottom-nav a, nav.desktop-nav a').forEach(link=>{
+  link.addEventListener('click', ()=>{
+    document.querySelectorAll('nav.bottom-nav a').forEach(a=>a.classList.remove('active'));
+    const alvo = link.getAttribute('href');
+    document.querySelectorAll(`nav.bottom-nav a[href="${alvo}"]`).forEach(a=>a.classList.add('active'));
+  });
+});
+
+document.querySelectorAll('#filtrosStatusEntradas .filtro-btn').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    document.querySelectorAll('#filtrosStatusEntradas .filtro-btn').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    filtroStatusAtual = btn.dataset.status;
+    atualizarTabela();
+  });
+});
+
+/* ============================================================
+   EDITAR ENTRADA
+   ============================================================ */
+function editarEntrada(index){
+  const entrada = entradas[index];
+  indiceEditando = index;
+  const form = document.getElementById('formEntrada');
+  form.data.value = entrada.data ? entrada.data.substring(0,10) : hojeISO();
+  form.casa.value = entrada.casa || 'Betfair';
+  form.campeonato.value = entrada.campeonato || '';
+  form.jogo.value = entrada.jogo || '';
+  form.tempo.value = entrada.tempo || '';
+  form.tipo.value = entrada.tipo || 'Over Gol HT - Valida';
+  form.operacao.value = entrada.operacao || 'Back';
+  form.odd.value = entrada.odd || '';
+  form.stake.value = entrada.stake || '';
+  form.resultado.value = entrada.resultado || 'Pendente';
+  form.lucro.value = entrada.lucro || '';
+  form.obs.value = entrada.obs || '';
+  document.getElementById('tituloForm').textContent = 'Editar entrada';
+  document.getElementById('btnSalvar').textContent = 'Atualizar entrada';
+  atualizarVisibilidadeModoLay();
+  calcularResponsabilidadeLay();
+  abrirModalEntrada();
+}
+
+/* ============================================================
+   CÁLCULOS DE LAY / LUCRO / COMISSÃO
+   ============================================================ */
+function atualizarVisibilidadeModoLay(){
+  document.getElementById('containerModoLay').style.display = (operacaoInput.value === 'Lay') ? 'block' : 'none';
+}
+
+function calcularLucroAutomatico(){
+  const operacao = operacaoInput.value;
+  const modoLay = modoLayInput.value;
+  const odd = Number(oddInput.value);
+  const stake = Number(stakeInput.value);
+  const resultado = resultadoInput.value;
+  const casa = casaInput.value;
+
+  if (!odd || !stake || resultado === 'Pendente' || resultado === 'Anulada'){
+    lucroInput.value = '';
+    return;
+  }
+
+  let lucro = 0;
+  if (operacao === 'Back'){
+    if (resultado === 'Green') lucro = stake * (odd - 1);
+    if (resultado === 'Red') lucro = -stake;
+  }
+  if (operacao === 'Lay'){
+    if (modoLay === 'responsabilidade'){
+      const responsabilidade = stake;
+      const lucroLay = responsabilidade / (odd - 1);
+      lucro = resultado === 'Green' ? lucroLay : -responsabilidade;
+    }
+    if (modoLay === 'stake'){
+      const responsabilidade = stake * (odd - 1);
+      lucro = resultado === 'Green' ? stake : -responsabilidade;
+    }
+  }
+
+  if (resultado === 'Green' && casa === 'Betfair' && lucro > 0){
+    lucro = lucro * TAXA_LIQUIDA_BETFAIR;
+  }
+
+  if (resultado === 'Cashout Green' || resultado === 'Cashout Red') return;
+
+  lucroInput.value = lucro.toFixed(2);
+}
+
+function calcularResponsabilidadeLay(){
+  const operacao = operacaoInput.value;
+  const modoLay = modoLayInput.value;
+  const odd = Number(oddInput.value);
+  const stake = Number(stakeInput.value);
+  const casa = casaInput.value;
+
+  if (operacao === 'Lay' && odd > 1 && stake > 0){
+    let responsabilidade, lucroLay;
+    if (modoLay === 'responsabilidade'){
+      responsabilidade = stake;
+      lucroLay = responsabilidade / (odd - 1);
+    } else {
+      lucroLay = stake;
+      responsabilidade = stake * (odd - 1);
+    }
+    const comissaoAtiva = casa === 'Betfair';
+    if (comissaoAtiva) lucroLay = lucroLay * TAXA_LIQUIDA_BETFAIR;
+    boxLay.style.display = 'block';
+    boxLay.innerHTML = `Lay · ${modoLay === 'responsabilidade' ? 'Responsabilidade fixa' : 'Stake Betfair'}<br>
+      GREEN: ${formatarMoeda(lucroLay)}${comissaoAtiva ? ' <span style="opacity:.7">(já com -4% de comissão Betfair)</span>' : ''} · RED: ${formatarMoeda(responsabilidade)}`;
   } else {
-    adicionarLinha(sheet, cabecalho, corpo);
+    boxLay.style.display = 'none';
+    boxLay.innerHTML = '';
   }
-
-  return ContentService.createTextOutput(JSON.stringify({ ok: true }))
-    .setMimeType(ContentService.MimeType.JSON);
 }
 
-function mapaCorpo(corpo){
-  return {
-    'ID': corpo.id || new Date().getTime(),
-    'Data': corpo.data || '',
-    'Casa': corpo.casa || '',
-    'Campeonato': corpo.campeonato || '',
-    'Jogo': corpo.jogo || '',
-    'Tempo': corpo.tempo || '',
-    'Tipo': corpo.tipo || '',
-    'Operação': corpo.operacao || '',
-    'Odd': corpo.odd || '',
-    'Stake': corpo.stake || '',
-    'Responsabilidade': corpo.responsabilidade || '',
-    'Resultado': corpo.resultado || '',
-    'Lucro': corpo.lucro || 0,
-    'Observações': corpo.obs || ''
+function aplicarSinalCashout(){
+  const resultado = resultadoInput.value;
+  if (lucroInput.value === '') return;
+  if (resultado === 'Cashout Red') lucroInput.value = (-Math.abs(Number(lucroInput.value))).toFixed(2);
+  else if (resultado === 'Cashout Green') lucroInput.value = Math.abs(Number(lucroInput.value)).toFixed(2);
+}
+
+tipoInput.addEventListener('change', ()=>{
+  const sugestao = operacaoSugeridaPorTipo(tipoInput.value);
+  if (sugestao) operacaoInput.value = sugestao;
+  atualizarVisibilidadeModoLay();
+  calcularResponsabilidadeLay();
+  calcularLucroAutomatico();
+});
+modoLayInput.addEventListener('change', ()=>{ calcularResponsabilidadeLay(); calcularLucroAutomatico(); });
+operacaoInput.addEventListener('change', ()=>{ atualizarVisibilidadeModoLay(); calcularResponsabilidadeLay(); calcularLucroAutomatico(); });
+casaInput.addEventListener('change', ()=>{ calcularResponsabilidadeLay(); calcularLucroAutomatico(); });
+oddInput.addEventListener('input', ()=>{ calcularResponsabilidadeLay(); calcularLucroAutomatico(); });
+stakeInput.addEventListener('input', ()=>{ calcularResponsabilidadeLay(); calcularLucroAutomatico(); });
+resultadoInput.addEventListener('change', ()=>{ calcularLucroAutomatico(); aplicarSinalCashout(); });
+lucroInput.addEventListener('blur', aplicarSinalCashout);
+
+/* ============================================================
+   PERSISTÊNCIA (Google Sheets via Apps Script)
+   ============================================================ */
+async function carregarEntradasDaPlanilha(){
+  try{
+    const resposta = await fetch(URL_PLANILHA);
+    const dados = await resposta.json();
+    entradas = dados.map(e => ({
+      id: e.ID, data: e.Data, casa: e.Casa, campeonato: e.Campeonato, jogo: e.Jogo, tempo: e.Tempo,
+      tipo: e.Tipo, operacao: e.Operação, odd: Number(e.Odd), stake: Number(e.Stake),
+      responsabilidade: Number(e.Responsabilidade), resultado: e.Resultado, lucro: Number(e.Lucro), obs: e.Observações
+    })).reverse();
+    atualizarTudo();
+  } catch(erro){
+    toast('Erro ao carregar dados da planilha.', 'erro');
+    console.error(erro);
+  }
+}
+
+async function salvarEntradaNaPlanilha(novaEntrada){
+  try{
+    await fetch(URL_PLANILHA, { method:'POST', mode:'no-cors', headers:{'Content-Type':'application/json'}, body: JSON.stringify(novaEntrada) });
+  } catch(erro){ toast('Erro ao salvar na planilha.', 'erro'); console.error(erro); }
+}
+async function atualizarEntradaCompletaNaPlanilha(entrada){
+  await fetch(URL_PLANILHA, { method:'POST', mode:'no-cors', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ acao:'atualizarTudo', ...entrada }) });
+}
+async function removerEntrada(index){
+  const entrada = entradas[index];
+  if (!confirm(`Remover esta entrada?\n\n${entrada.jogo} | ${entrada.tipo}`)) return;
+  await fetch(URL_PLANILHA, { method:'POST', mode:'no-cors', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ acao:'remover', id: entrada.id }) });
+  await carregarEntradasDaPlanilha();
+  toast('Entrada removida.', 'sucesso');
+}
+
+document.getElementById('formEntrada').addEventListener('submit', async function(event){
+  event.preventDefault();
+  const form = new FormData(this);
+  const operacao = form.get('operacao');
+  const odd = Number(form.get('odd'));
+  const stake = Number(form.get('stake'));
+  const modoLay = form.get('modoLay');
+
+  let responsabilidade = stake;
+  if (operacao === 'Lay' && odd > 1){
+    responsabilidade = modoLay === 'responsabilidade' ? stake : stake * (odd - 1);
+  }
+
+  let lucroDigitado = form.get('lucro') === '' ? 0 : Number(form.get('lucro'));
+  const resultadoSelecionado = form.get('resultado');
+  if (resultadoSelecionado === 'Red' || resultadoSelecionado === 'Cashout Red') lucroDigitado = -Math.abs(lucroDigitado);
+  if (resultadoSelecionado === 'Green' || resultadoSelecionado === 'Cashout Green') lucroDigitado = Math.abs(lucroDigitado);
+
+  const novaEntrada = {
+    data: form.get('data'), casa: form.get('casa'), campeonato: form.get('campeonato'), jogo: form.get('jogo'),
+    tempo: form.get('tempo'), tipo: form.get('tipo'), operacao, odd, stake, responsabilidade,
+    resultado: resultadoSelecionado, lucro: lucroDigitado, obs: form.get('obs')
   };
+
+  if (indiceEditando !== null){
+    novaEntrada.id = entradas[indiceEditando].id;
+    await atualizarEntradaCompletaNaPlanilha(novaEntrada);
+    fecharModalEntrada();
+    await carregarEntradasDaPlanilha();
+    toast('Entrada atualizada!', 'sucesso');
+    return;
+  }
+  await salvarEntradaNaPlanilha(novaEntrada);
+  fecharModalEntrada();
+  await carregarEntradasDaPlanilha();
+  toast('Entrada salva!', 'sucesso');
+});
+
+/* ============================================================
+   HELPERS
+   ============================================================ */
+function agoraBrasilia(){
+  const agora = new Date();
+  const formatter = new Intl.DateTimeFormat('en-US', { timeZone:'America/Sao_Paulo', year:'numeric', month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit', second:'2-digit', hour12:false });
+  const partes = formatter.formatToParts(agora).reduce((acc,p)=>{ acc[p.type]=p.value; return acc; }, {});
+  const hora = partes.hour === '24' ? '00' : partes.hour;
+  return new Date(`${partes.year}-${partes.month}-${partes.day}T${hora}:${partes.minute}:${partes.second}`);
+}
+function hojeISO(){
+  const b = agoraBrasilia();
+  return `${b.getFullYear()}-${String(b.getMonth()+1).padStart(2,'0')}-${String(b.getDate()).padStart(2,'0')}`;
+}
+function formatarMoeda(valor){ return (valor || 0).toLocaleString('pt-BR', { style:'currency', currency:'BRL' }); }
+function alternarValores(){
+  valoresOcultos = !valoresOcultos;
+  document.querySelectorAll('.valor-financeiro').forEach(item=>{ item.innerText = valoresOcultos ? 'R$ ••••••' : item.dataset.valor; });
+  const btnOlho = document.getElementById('btnOlho');
+  btnOlho.innerHTML = valoresOcultos
+    ? '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.94 10.94 0 0 1 12 19c-7 0-11-7-11-7a21.6 21.6 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 7 11 7a21.6 21.6 0 0 1-2.16 3.19M14.12 14.12a3 3 0 1 1-4.24-4.24"/><path d="M1 1l22 22"/></svg>'
+    : '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7Z"/><circle cx="12" cy="12" r="3"/></svg>';
+}
+function dataDaEntrada(e){
+  if (typeof e.data === 'string' && e.data.includes('T')) return new Date(e.data);
+  return new Date(e.data + 'T00:00:00');
+}
+function ehMesmoDia(data, d, m, a){ return data.getDate() === d && data.getMonth() === m && data.getFullYear() === a; }
+function ehAcerto(resultado){ return resultado === 'Green' || resultado === 'Cashout Green'; }
+function ehErro(resultado){ return resultado === 'Red' || resultado === 'Cashout Red'; }
+
+/* ============================================================
+   DASHBOARD GERAL
+   ============================================================ */
+function atualizarDashboard(){
+  const lucroTotal = entradas.reduce((total, e) => total + (Number(e.lucro)||0), 0);
+  const greens = entradas.filter(e => ehAcerto(e.resultado)).length;
+  const reds = entradas.filter(e => ehErro(e.resultado)).length;
+  const decididas = greens + reds;
+  const taxa = decididas > 0 ? ((greens / decididas) * 100).toFixed(1) : 0;
+
+  document.getElementById('lucroTopo').dataset.valor = formatarMoeda(lucroTotal);
+  document.getElementById('lucroTopo').innerText = valoresOcultos ? 'R$ ••••••' : formatarMoeda(lucroTotal);
+  document.getElementById('lucroTopo').style.color = lucroTotal>=0 ? 'var(--pos)' : 'var(--neg)';
+
+  document.getElementById('lucroTotal').dataset.valor = formatarMoeda(lucroTotal);
+  document.getElementById('lucroTotal').innerText = valoresOcultos ? 'R$ ••••••' : formatarMoeda(lucroTotal);
+  document.getElementById('lucroTotal').className = 'valor valor-financeiro ' + (lucroTotal >= 0 ? 'positive' : 'negative');
+
+  document.getElementById('taxaAcerto').textContent = taxa + '%';
+  document.getElementById('totalEntradas').textContent = entradas.length;
+
+  const diasUnicos = new Set(entradas.filter(e=>e.data).map(e=>{ const d=dataDaEntrada(e); return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`; }));
+  document.getElementById('diasOperados').textContent = diasUnicos.size;
 }
 
-function adicionarLinha(sheet, cabecalho, corpo){
-  const mapa = mapaCorpo(corpo);
-  const linha = cabecalho.map(col => (mapa[col] !== undefined ? mapa[col] : ''));
-  sheet.appendRow(linha);
+/* ============================================================
+   CALENDÁRIO
+   ============================================================ */
+function calcularLucroPorDia(){
+  const resultado = {};
+  entradas.forEach(e=>{
+    if (!e.data) return;
+    const dia = dataDaEntrada(e).getDate();
+    resultado[dia] = (resultado[dia] || 0) + (Number(e.lucro) || 0);
+  });
+  return resultado;
 }
+const MESES = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 
-function atualizarLinha(sheet, cabecalho, corpo){
-  const mapa = mapaCorpo(corpo);
-  const colId = cabecalho.indexOf('ID');
-  const dados = sheet.getDataRange().getValues();
-  for (let i = 1; i < dados.length; i++){
-    if (String(dados[i][colId]) === String(corpo.id)){
-      const linha = cabecalho.map((col, idx) =>
-        idx === colId ? dados[i][colId] : (mapa[col] !== undefined ? mapa[col] : '')
-      );
-      sheet.getRange(i + 1, 1, 1, cabecalho.length).setValues([linha]);
-      break;
-    }
+function atualizarCalendario(){
+  const calendario = document.getElementById('calendario');
+  calendario.innerHTML = '';
+  const hoje = agoraBrasilia();
+  const ano = hoje.getFullYear();
+  const mes = hoje.getMonth();
+  document.getElementById('mesAtualLabel').textContent = `${MESES[mes]} ${ano}`;
+
+  const primeiroDiaMes = new Date(ano, mes, 1);
+  const ultimoDiaMes = new Date(ano, mes + 1, 0);
+  ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'].forEach(nome=>{
+    const cab = document.createElement('div'); cab.className = 'dia-semana'; cab.innerText = nome; calendario.appendChild(cab);
+  });
+  for (let i=0; i<primeiroDiaMes.getDay(); i++){
+    const vazio = document.createElement('div'); vazio.className = 'dia-vazio'; calendario.appendChild(vazio);
+  }
+
+  const dadosDias = calcularLucroPorDia();
+  for (let dia=1; dia<=ultimoDiaMes.getDate(); dia++){
+    const div = document.createElement('div');
+    div.className = 'dia';
+    const lucroDia = dadosDias[dia] || 0;
+    const temEntradas = dadosDias.hasOwnProperty(dia);
+    if (!temEntradas) div.classList.add('neutro');
+    else if (lucroDia > 0) div.classList.add('positivo');
+    else if (lucroDia < 0) div.classList.add('negativo');
+    else div.classList.add('neutro');
+    if (dia === hoje.getDate()) div.classList.add('hoje');
+    div.innerHTML = `<span class="num">${dia}</span>${temEntradas ? `<span class="val">${formatarMoeda(lucroDia)}</span>` : ''}`;
+    div.addEventListener('click', ()=>{
+      const entradasDia = entradas.filter(e => e.data && ehMesmoDia(dataDaEntrada(e), dia, mes, ano));
+      if (entradasDia.length === 0){ abrirModal(`${dia} de ${MESES[mes]}`, `<p style="color:var(--text-muted)">Nenhuma entrada neste dia.</p>`); return; }
+      let html = '';
+      entradasDia.forEach(e=>{
+        html += `<div class="entrada-item"><div class="linha1"><span>${e.jogo}</span><span class="${e.lucro>=0?'positive':'negative'}">${formatarMoeda(e.lucro)}</span></div>
+          <span style="color:var(--text-muted); font-size:.78rem;">${e.tipo} · ${e.operacao} · ${e.resultado}</span></div>`;
+      });
+      abrirModal(`${dia} de ${MESES[mes]} · Total ${formatarMoeda(lucroDia)}`, html);
+    });
+    calendario.appendChild(div);
   }
 }
 
-function removerLinha(sheet, cabecalho, id){
-  const colId = cabecalho.indexOf('ID');
-  const dados = sheet.getDataRange().getValues();
-  for (let i = 1; i < dados.length; i++){
-    if (String(dados[i][colId]) === String(id)){
-      sheet.deleteRow(i + 1);
-      break;
-    }
-  }
+/* ============================================================
+   TABELA / LISTA
+   ============================================================ */
+function atualizarTabela(){
+  tabelaEntradas.innerHTML = '';
+  const filtradas = entradas
+    .map((e, idxOriginal) => ({...e, idxOriginal}))
+    .filter(e => filtroStatusAtual === 'todos' || (e.resultado || 'Pendente') === filtroStatusAtual);
+
+  document.getElementById('emptyState').style.display = filtradas.length === 0 ? 'block' : 'none';
+
+  filtradas.forEach(e=>{
+    const index = e.idxOriginal;
+    const dataFormatada = e.data ? new Date(e.data).toLocaleDateString('pt-BR') : '-';
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td data-label="Data">${dataFormatada}</td>
+      <td data-label="Jogo">${e.jogo}</td>
+      <td data-label="Método">${e.tipo}</td>
+      <td data-label="Operação">${e.operacao}</td>
+      <td data-label="Odd">${e.odd ? e.odd.toFixed(2) : '-'}</td>
+      <td data-label="Stake">${formatarMoeda(e.stake || 0)}</td>
+      <td data-label="Resultado">${e.resultado || 'Pendente'}</td>
+      <td data-label="Lucro" class="${e.lucro>=0?'positive':'negative'}">${formatarMoeda(e.lucro || 0)}</td>
+      <td class="linha-acoes">
+        <button class="acoes-btn" onclick="editarEntrada(${index})">Editar</button>
+        <button class="acoes-btn remover" onclick="removerEntrada(${index})">Remover</button>
+      </td>`;
+    tabelaEntradas.appendChild(tr);
+  });
 }
+
+/* ============================================================
+   RANKINGS
+   ============================================================ */
+let rankingAtual = 'metodo-lucro';
+function construirRanking(campo){
+  const grupos = {};
+  entradas.forEach(e=>{
+    let chave = campo === 'tipo' ? e.tipo : (e.campeonato || '').trim();
+    if (!chave) return;
+    if (!grupos[chave]) grupos[chave] = { nome: chave, lucro:0, contagem:0, greens:0, reds:0 };
+    grupos[chave].lucro += Number(e.lucro) || 0;
+    grupos[chave].contagem += 1;
+    if (ehAcerto(e.resultado)) grupos[chave].greens += 1;
+    if (ehErro(e.resultado)) grupos[chave].reds += 1;
+  });
+  return Object.values(grupos);
+}
+function linhaRanking(item, posicao, campo){
+  const decididas = item.greens + item.reds;
+  const taxa = decididas > 0 ? ((item.greens / decididas) * 100).toFixed(0) : '-';
+  return `<div class="ranking-linha" onclick="abrirDetalheCampo('${campo}', ${JSON.stringify(item.nome).replace(/"/g,'&quot;')}, '${campo === 'tipo' ? 'Método' : 'Campeonato'}')">
+    <span class="ranking-pos">${posicao}</span>
+    <div class="ranking-info">
+      <div class="ranking-nome">${item.nome}</div>
+      <div class="ranking-sub">${item.contagem} entrada${item.contagem>1?'s':''}${taxa !== '-' ? ' · ' + taxa + '% acerto' : ''}</div>
+    </div>
+    <span class="ranking-valor ${item.lucro>=0?'positive':'negative'}">${formatarMoeda(item.lucro)}</span>
+  </div>`;
+}
+function renderizarRankingLucro(campo){
+  const lista = construirRanking(campo).sort((a,b)=> b.lucro - a.lucro);
+  const corpo = document.getElementById('corpoRanking');
+  if (lista.length === 0){ corpo.innerHTML = `<div class="ranking-vazio">Sem dados suficientes ainda.</div>`; return; }
+  if (lista.length <= 10){ corpo.innerHTML = `<div>${lista.map((item,i)=> linhaRanking(item, i+1, campo)).join('')}</div>`; return; }
+  const melhores = lista.slice(0, 5);
+  const piores = lista.slice(-5).reverse();
+  corpo.innerHTML = `<div class="ranking-colunas">
+    <div><div class="ranking-titulo-coluna melhores">Melhores</div>${melhores.map((item,i)=> linhaRanking(item, i+1, campo)).join('')}</div>
+    <div><div class="ranking-titulo-coluna piores">Piores</div>${piores.map((item,i)=> linhaRanking(item, i+1, campo)).join('')}</div>
+  </div>`;
+}
+function renderizarRankingFrequencia(){
+  const lista = construirRanking('tipo').sort((a,b)=> b.contagem - a.contagem);
+  const corpo = document.getElementById('corpoRanking');
+  if (lista.length === 0){ corpo.innerHTML = `<div class="ranking-vazio">Sem dados suficientes ainda.</div>`; return; }
+  const max = Math.max(...lista.map(l=>l.contagem));
+  corpo.innerHTML = lista.map((item, i)=>{
+    const pct = (item.contagem / max) * 100;
+    return `<div class="ranking-linha" onclick="abrirDetalheCampo('tipo', ${JSON.stringify(item.nome).replace(/"/g,'&quot;')}, 'Método')">
+      <span class="ranking-pos">${i+1}</span>
+      <div class="ranking-info">
+        <div class="ranking-nome">${item.nome}</div>
+        <div class="ranking-freq-barra"><span style="width:${pct}%;"></span></div>
+      </div>
+      <span class="ranking-valor">${item.contagem}×</span>
+    </div>`;
+  }).join('');
+}
+function atualizarRanking(){
+  if (rankingAtual === 'metodo-lucro') renderizarRankingLucro('tipo');
+  else if (rankingAtual === 'campeonato-lucro') renderizarRankingLucro('campeonato');
+  else if (rankingAtual === 'metodo-frequencia') renderizarRankingFrequencia();
+}
+document.querySelectorAll('#rankings .filtro-btn').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    document.querySelectorAll('#rankings .filtro-btn').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    rankingAtual = btn.dataset.ranking;
+    atualizarRanking();
+  });
+});
+function abrirDetalheCampo(campo, valor, rotulo){
+  const filtradas = entradas.filter(e => (campo === 'tipo' ? e.tipo : (e.campeonato||'').trim()) === valor)
+    .sort((a,b)=> dataDaEntrada(b) - dataDaEntrada(a));
+  const total = filtradas.reduce((s,e)=> s + (Number(e.lucro)||0), 0);
+  let html = '';
+  filtradas.forEach(e=>{
+    const dataFormatada = e.data ? new Date(e.data).toLocaleDateString('pt-BR') : '-';
+    html += `<div class="entrada-item"><div class="linha1"><span>${e.jogo}</span><span class="${e.lucro>=0?'positive':'negative'}">${formatarMoeda(e.lucro)}</span></div>
+      <span style="color:var(--text-muted); font-size:.78rem;">${dataFormatada} · ${e.tipo} · ${e.operacao} · ${e.resultado}</span></div>`;
+  });
+  abrirModal(`${rotulo}: ${valor} · Total ${formatarMoeda(total)}`, html);
+}
+
+/* ============================================================
+   GRÁFICOS
+   ============================================================ */
+let graficoAcumulado, graficoMetodo;
+const pluginRotulos = {
+  id:'pluginRotulos',
+  afterDatasetsDraw(chart){
+    const { ctx } = chart;
+    chart.data.datasets.forEach((dataset, datasetIndex)=>{
+      const meta = chart.getDatasetMeta(datasetIndex);
+      const ehPizza = (chart.config.type === 'doughnut' || chart.config.type === 'pie');
+      meta.data.forEach((elemento, index)=>{
+        const valorReal = (ehPizza && dataset.valoresReais) ? dataset.valoresReais[index] : dataset.data[index];
+        if (valorReal === undefined || valorReal === null) return;
+        let pos;
+        if (ehPizza){
+          const angulo = Math.abs(elemento.endAngle - elemento.startAngle);
+          if (angulo < 0.35) return;
+          pos = elemento.getCenterPoint();
+        } else { pos = { x: elemento.x, y: elemento.y - 10 }; }
+        ctx.save();
+        ctx.textAlign = 'center';
+        if (ehPizza){ ctx.fillStyle = '#0A0D12'; ctx.font = 'bold 11px Space Grotesk, Arial'; }
+        else { ctx.fillStyle = '#EDEFF3'; ctx.font = 'bold 10px Inter, Arial'; }
+        ctx.fillText(formatarMoeda(valorReal), pos.x, pos.y);
+        ctx.restore();
+      });
+    });
+  }
+};
+
+function atualizarGraficos(){
+  const porDia = {};
+  entradas.forEach(e=>{
+    const lucro = Number(e.lucro) || 0;
+    let dataFormatada = e.data ? new Date(e.data).toLocaleDateString('pt-BR') : '-';
+    porDia[dataFormatada] = (porDia[dataFormatada] || 0) + lucro;
+  });
+  const diasOrdenados = Object.keys(porDia).sort((a,b)=>{
+    const [da,ma,aa] = a.split('/'); const [db,mb,ab] = b.split('/');
+    return new Date(`${aa}-${ma}-${da}`) - new Date(`${ab}-${mb}-${db}`);
+  });
+  let acumulado = 0;
+  const acumuladoPorDia = diasOrdenados.map(dia => acumulado += porDia[dia]);
+
+  if (graficoAcumulado) graficoAcumulado.destroy();
+  graficoAcumulado = new Chart(document.getElementById('graficoAcumulado'), {
+    type:'line',
+    data:{ labels: diasOrdenados, datasets:[{ label:'Lucro acumulado (R$)', data: acumuladoPorDia, borderColor:'#3FC7C7', backgroundColor:'rgba(63,199,199,.12)', fill:true, tension:.35, pointRadius:3, pointBackgroundColor:'#3FC7C7' }] },
+    plugins:[pluginRotulos],
+    options:{ responsive:true, maintainAspectRatio:false, layout:{padding:{top:20}}, plugins:{legend:{display:false}},
+      scales:{ x:{ ticks:{color:'#8A93A3', maxRotation:45, minRotation:45}, grid:{color:'#262D38'} }, y:{ ticks:{color:'#8A93A3'}, grid:{color:'#262D38'} } } }
+  });
+
+  const porMetodo = {};
+  entradas.forEach(e=>{
+    if (!porMetodo[e.tipo]) porMetodo[e.tipo] = 0;
+    porMetodo[e.tipo] += Number(e.lucro) || 0;
+  });
+  const metodosComDados = Object.keys(porMetodo).filter(k => porMetodo[k] !== 0 || entradas.some(e=>e.tipo===k));
+  const cores = ['#3FC7C7','#E8B84B','#6C8EF5','#34D399','#F0616B','#7A8394','#B57EDC','#F5A623','#4FADF7','#E67E9E','#8FBC8F'];
+
+  if (graficoMetodo) graficoMetodo.destroy();
+  graficoMetodo = new Chart(document.getElementById('graficoMetodo'), {
+    type:'doughnut',
+    data:{
+      labels: metodosComDados,
+      datasets:[{
+        data: metodosComDados.map(k => Math.max(Math.abs(porMetodo[k]), 0.01)),
+        valoresReais: metodosComDados.map(k => porMetodo[k]),
+        backgroundColor: metodosComDados.map((_,i)=> cores[i % cores.length]),
+        borderColor:'#12161D', borderWidth:3
+      }]
+    },
+    plugins:[pluginRotulos],
+    options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:{ position:'bottom', labels:{ color:'#8A93A3', padding:10, font:{ size:10 }, boxWidth:10 } } } }
+  });
+}
+
+/* ============================================================
+   INIT
+   ============================================================ */
+function atualizarTudo(){
+  atualizarDashboard();
+  atualizarCalendario();
+  atualizarTabela();
+  atualizarGraficos();
+  atualizarRanking();
+}
+
+document.querySelector('input[name="data"]').value = hojeISO();
+atualizarVisibilidadeModoLay();
+carregarEntradasDaPlanilha();
+</script>
+</body>
+</html>
